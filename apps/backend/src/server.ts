@@ -1,7 +1,12 @@
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import { type HealthResponse } from "@renda-fixa-monitor/shared";
 import Fastify from "fastify";
 import { loadEnvConfig } from "./config/env.js";
+import { UnauthorizedError } from "./errors/unauthorized-error.js";
+import { authenticate } from "./middlewares/auth.js";
+import { createMongooseUserRepository, type IUserRepository } from "./repositories/user.repository.js";
+import { authRoutes } from "./modules/auth/auth.routes.js";
 import bcryptPlugin from "./plugins/bcrypt.js";
 import jwtPlugin from "./plugins/jwt.js";
 import mongoosePlugin from "./plugins/mongoose.js";
@@ -21,6 +26,11 @@ export interface BuildServerOptions {
    * @default true
    */
   registerStorage?: boolean;
+  /**
+   * Substitui o repositório de usuários padrão (Mongoose).
+   * Útil para injetar uma implementação falsa em testes.
+   */
+  userRepository?: IUserRepository;
 }
 
 export async function buildServer(options?: BuildServerOptions) {
@@ -29,9 +39,11 @@ export async function buildServer(options?: BuildServerOptions) {
 
   const app = Fastify({ logger: false });
 
+  await app.register(cookie);
   await app.register(cors, {
     origin: config.corsOrigin,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
   });
 
   await app.register(swaggerPlugin);
@@ -42,6 +54,31 @@ export async function buildServer(options?: BuildServerOptions) {
   if (registerMongoose) {
     await app.register(mongoosePlugin);
   }
+
+  // Rotas sem `config.isPublic` exigem um access token válido (cookie ou header).
+  app.addHook("onRequest", authenticate);
+
+  app.setErrorHandler((error, _request, reply) => {
+    if (error instanceof UnauthorizedError) {
+      return reply.status(401).send({
+        statusCode: 401,
+        error: "Unauthorized",
+        message: error.message,
+      });
+    }
+
+    console.error(error);
+
+    return reply.status(500).send({
+      statusCode: 500,
+      error: "Internal Server Error",
+      message: "Erro interno do servidor.",
+    });
+  });
+
+  const userRepository = options?.userRepository ?? createMongooseUserRepository();
+
+  await app.register(authRoutes, { prefix: "/auth", userRepository });
 
   app.get(
     "/health",

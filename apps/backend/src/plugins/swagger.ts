@@ -3,16 +3,26 @@ import type { FastifyInstance } from "fastify";
 import fp from "fastify-plugin";
 import { loadEnvConfig } from "../config/env.js";
 
-async function swaggerPlugin(fastify: FastifyInstance, _opts: object) {
+async function swaggerPlugin(fastify: FastifyInstance) {
   const config = loadEnvConfig();
   const serverUrl = `${config.host === "0.0.0.0" ? "http://localhost" : `https://${config.host}`}:${config.port}`;
+
+  // As rotas do Swagger (/documentation/*) são públicas: não exigem token de
+  // autenticação. Elas servem a especificação consumida pela UI em /docs.
+  fastify.addHook("onRoute", (routeOptions) => {
+    if (routeOptions.url.startsWith("/documentation")) {
+      routeOptions.config = {
+        ...routeOptions.config,
+        isPublic: true,
+      };
+    }
+  });
 
   await fastify.register(swagger, {
     openapi: {
       info: {
-        title: "FGC Monitor API",
-        description:
-          "API para monitoramento de investimentos protegidos pelo FGC (Fundo Garantidor de Créditos).",
+        title: "Renda Fixa Monitor API",
+        description: "API para monitoramento os investimentos em Renda Fixa.",
         version: "0.0.0",
       },
       servers: [
@@ -28,6 +38,12 @@ async function swaggerPlugin(fastify: FastifyInstance, _opts: object) {
             scheme: "bearer",
             bearerFormat: "JWT",
             description: "Token JWT obtido no login.",
+          },
+          cookieAuth: {
+            type: "apiKey",
+            in: "cookie",
+            name: "accessToken",
+            description: "Autenticação por cookie HttpOnly definido no login.",
           },
         },
       },
