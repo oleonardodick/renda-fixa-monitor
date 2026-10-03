@@ -38,4 +38,15 @@ Code, identifiers, file names, comments, and technical documentation may remain 
 - Before modifying code, inspect the existing implementation and follow established patterns.
 - Preserve backward compatibility unless the task explicitly requires a breaking change.
 - After changes, run the smallest relevant validation available.
-- Never commit or push any changes. This has to be manualy made by the user.
+- Never commit or push any changes. All commits and pushes must be performed manually by the user.
+
+## Decision-Making and Clarification
+
+- Do not make assumptions about undefined requirements, business rules, expected behavior, or user intent.
+- When a requirement is ambiguous, incomplete, contradictory, or open to multiple reasonable interpretations, ask the user for clarification before implementing it.
+- Do not silently choose between materially different implementation or architectural options when the requirements do not determine the choice.
+- Prefer asking a concise clarification question over implementing based on an assumption that may require rework.
+- Minor implementation details may be decided autonomously when they do not affect requirements, behavior, architecture, security, data, or user experience.
+- When asking for clarification, briefly explain what is unclear and why the decision affects the implementation.
+- Do not invent requirements, business rules, acceptance criteria, or expected behavior to fill gaps.
+- If an important requirement is missing, stop and ask for the missing information before proceeding with implementation.
