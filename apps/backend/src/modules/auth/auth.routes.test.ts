@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { IUserRepository, User } from "../repositories/user.repository.js";
-import { buildServer } from "../server.js";
+import type { IUserRepository, User } from "../users/user.repository.js";
+import { buildServer } from "../../server.js";
+import { getCookieEntries, getCookieValue } from "../../tests/helpers.js";
 
 process.env.JWT_SECRET ??= "test-access-secret";
 process.env.JWT_REFRESH_SECRET ??= "test-refresh-secret";
@@ -19,40 +20,22 @@ const fakeUser: User = {
 
 const userRepository: IUserRepository = {
   findByEmail: async (email) => (email === TEST_EMAIL ? fakeUser : null),
+  // A criação de usuário é coberta pelos testes de POST /users.
+  create: async () => {
+    throw new Error("Criação de usuário não é exercitada neste teste.");
+  },
 };
 
 let app: Awaited<ReturnType<typeof buildServer>>;
 
 beforeAll(async () => {
   fakeUser.passwordHash = await bcrypt.hash(TEST_PASSWORD, 4);
-  app = await buildServer({ registerMongoose: false, userRepository });
+  app = await buildServer({ registerMongoose: false, userRepository, registerRateLimit: false });
 });
 
 afterAll(async () => {
   await app.close();
 });
-
-function getCookieEntries(response: { headers: Record<string, unknown> }): string[] {
-  const setCookie = response.headers["set-cookie"];
-
-  if (!setCookie) {
-    return [];
-  }
-
-  return Array.isArray(setCookie) ? setCookie : [String(setCookie)];
-}
-
-function getCookieValue(response: { headers: Record<string, unknown> }, name: string): string {
-  const entry = getCookieEntries(response).find((header) =>
-    header.startsWith(`${name}=`),
-  );
-
-  if (!entry) {
-    throw new Error(`Cookie "${name}" não encontrado na resposta.`);
-  }
-
-  return entry.split(";")[0].slice(name.length + 1);
-}
 
 describe("POST /auth/login", () => {
   it("deve autenticar o usuário e iniciar a sessão com cookies HttpOnly", async () => {

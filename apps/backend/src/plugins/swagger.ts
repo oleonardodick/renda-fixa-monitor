@@ -14,6 +14,7 @@ async function swaggerPlugin(fastify: FastifyInstance) {
       routeOptions.config = {
         ...routeOptions.config,
         isPublic: true,
+        rateLimit: false,
       };
     }
   });

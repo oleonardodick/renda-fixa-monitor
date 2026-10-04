@@ -1,17 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { loadEnvConfig } from "../../config/env.js";
-import type { IUserRepository } from "../../repositories/user.repository.js";
-import {
-  ACCESS_TOKEN_TTL,
-  REFRESH_TOKEN_TTL,
-} from "./auth.constants.js";
+import type { IUserRepository } from "../users/user.repository.js";
+import { createAuthServiceDeps } from "./auth.dependencies.js";
 import {
   createLoginHandler,
   createLogoutHandler,
   createMeHandler,
   type AuthHandlerDeps,
 } from "./auth.controller.js";
-import type { AuthServiceDeps } from "./auth.service.js";
 
 export interface AuthRoutesOptions {
   /** Repositório de usuários injetado pela composição do servidor. */
@@ -39,19 +35,8 @@ const userIdResponseSchema = {
 export async function authRoutes(app: FastifyInstance, options: AuthRoutesOptions) {
   const config = loadEnvConfig();
 
-  const authServiceDeps: AuthServiceDeps = {
-    userRepository: options.userRepository,
-    comparePassword: (plain, hash) => app.bcrypt.compare(plain, hash),
-    tokenSigner: {
-      signAccessToken: (payload) =>
-        app.jwt.access.sign(payload, { expiresIn: ACCESS_TOKEN_TTL }),
-      signRefreshToken: (payload) =>
-        app.jwt.refresh.sign(payload, { expiresIn: REFRESH_TOKEN_TTL }),
-    },
-  };
-
   const handlerDeps: AuthHandlerDeps = {
-    authService: authServiceDeps,
+    authService: createAuthServiceDeps(app, options.userRepository),
     cookieSecure: config.cookieSecure,
   };
 

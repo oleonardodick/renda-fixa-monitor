@@ -192,13 +192,14 @@ Gera os builds das aplicações e do pacote compartilhado.
 pnpm test
 ```
 
-Executa os testes automatizados do frontend e backend.
+Executa os testes automatizados do pacote compartilhado, do backend e do frontend.
 
 Para executar os testes de uma aplicação específica:
 
 ```bash
 pnpm --filter frontend test
 pnpm --filter backend test
+pnpm --filter @renda-fixa-monitor/shared test
 ```
 
 ### Type checking
@@ -223,7 +224,8 @@ O sistema utiliza autenticação stateless com JWT e cookies `HttpOnly`:
 
 * `POST /auth/login` — autentica o usuário e define os cookies de sessão (`accessToken` com validade de 1 hora e `refreshToken` com validade de 1 dia);
 * `POST /auth/logout` — limpa os cookies de sessão;
-* `GET /auth/me` — retorna o usuário da sessão atual.
+* `GET /auth/me` — retorna o usuário da sessão atual;
+* `POST /users` — cadastro público de usuário: cria a conta e já inicia a sessão.
 
 Detalhes, regras de negócio e instruções para criar usuários de teste em [docs/auth.md](docs/auth.md).
 

@@ -3,4 +3,6 @@ export interface HealthResponse {
   timestamp: string;
 }
 
+export * from "./schemas/api-error.js";
 export * from "./schemas/auth.js";
+export * from "./schemas/user.js";

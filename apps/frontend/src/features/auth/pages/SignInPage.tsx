@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 import { SignInForm } from "../components/SignInForm";
 
 export function SignInPage() {
@@ -11,13 +12,19 @@ export function SignInPage() {
         </CardHeader>
         <CardContent>
           <SignInForm />
-          <div className="mt-3 text-center">
+          <div className="mt-3 flex flex-col items-center gap-2">
             <a
               href="#"
               className="text-xs text-muted-foreground underline-offset-4 hover:underline"
             >
               Esqueci minha senha
             </a>
+            <Link
+              to="/register"
+              className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+            >
+              Não tem uma conta? Criar Conta
+            </Link>
           </div>
         </CardContent>
       </Card>

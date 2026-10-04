@@ -1,6 +1,6 @@
 import { type SignInInput } from "@renda-fixa-monitor/shared";
 import { UnauthorizedError } from "../../errors/unauthorized-error.js";
-import type { IUserRepository } from "../../repositories/user.repository.js";
+import type { IUserRepository, User } from "../users/user.repository.js";
 import { INVALID_CREDENTIALS_MESSAGE } from "./auth.constants.js";
 
 /** Payload mínimo exigido nos tokens de sessão. */
@@ -33,8 +33,23 @@ export interface SignInResult {
  * e-mail não existe. Mantém o tempo de resposta semelhante entre as falhas de
  * e-mail inexistente e senha incorreta, dificultando a enumeração de usuários.
  */
-const DUMMY_PASSWORD_HASH =
-  "$2b$10$kmTuYlbaw/SYwdM0.rGpEeglfPbvzLjrD6xPw/p4eOaFYnqK6osUK";
+const DUMMY_PASSWORD_HASH = "$2b$10$kmTuYlbaw/SYwdM0.rGpEeglfPbvzLjrD6xPw/p4eOaFYnqK6osUK";
+
+/**
+ * Cria os tokens de sessão de um usuário já autenticado.
+ *
+ * É a única origem de sessão do sistema e é reutilizada pela feature de Login
+ * e pelo cadastro de usuário, garantindo tokens e cookies idênticos.
+ */
+export function createSession(deps: AuthServiceDeps, user: User): SignInResult {
+  const payload: AuthTokenPayload = { sub: user.id, email: user.email };
+
+  return {
+    userId: user.id,
+    accessToken: deps.tokenSigner.signAccessToken(payload),
+    refreshToken: deps.tokenSigner.signRefreshToken(payload),
+  };
+}
 
 export async function signIn(
   deps: AuthServiceDeps,
@@ -50,11 +65,5 @@ export async function signIn(
     throw new UnauthorizedError(INVALID_CREDENTIALS_MESSAGE);
   }
 
-  const payload: AuthTokenPayload = { sub: user.id, email: user.email };
-
-  return {
-    userId: user.id,
-    accessToken: deps.tokenSigner.signAccessToken(payload),
-    refreshToken: deps.tokenSigner.signRefreshToken(payload),
-  };
+  return createSession(deps, user);
 }

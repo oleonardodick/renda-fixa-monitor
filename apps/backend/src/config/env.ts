@@ -8,6 +8,10 @@ export interface EnvConfig {
   jwtExpiresIn: string;
   bcryptSaltRounds: number;
   cookieSecure: boolean;
+  /** Máximo de requisições de cadastro por janela de tempo. */
+  rateLimitMax: number;
+  /** Janela de tempo (em ms) do limite de requisições de cadastro. */
+  rateLimitWindowMs: number;
 }
 
 export function loadEnvConfig(): EnvConfig {
@@ -38,5 +42,7 @@ export function loadEnvConfig(): EnvConfig {
     bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS ?? 10),
     cookieSecure:
       (process.env.COOKIE_SECURE ?? String(process.env.NODE_ENV === "production")) === "true",
+    rateLimitMax: Number(process.env.RATE_LIMIT_MAX ?? 5),
+    rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000),
   };
 }

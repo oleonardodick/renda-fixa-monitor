@@ -24,6 +24,7 @@
     "@fastify/cors": "^11.3.0",
     "@fastify/jwt": "^10.2.2",
     "@fastify/multipart": "^10.1.2",
+    "@fastify/rate-limit": "^11.2.0",
     "@fastify/swagger": "^9.9.0",
     "@renda-fixa-monitor/shared": "workspace:*",
     "@scalar/fastify-api-reference": "^1.72.1",

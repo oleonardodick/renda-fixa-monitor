@@ -4,12 +4,18 @@ import { type HealthResponse } from "@renda-fixa-monitor/shared";
 import Fastify from "fastify";
 import { loadEnvConfig } from "./config/env.js";
 import { UnauthorizedError } from "./errors/unauthorized-error.js";
+import { RateLimitError } from "./errors/rate-limit-error.js";
 import { authenticate } from "./middlewares/auth.js";
-import { createMongooseUserRepository, type IUserRepository } from "./repositories/user.repository.js";
+import {
+  createMongooseUserRepository,
+  type IUserRepository,
+} from "./modules/users/user.repository.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
+import { userRoutes } from "./modules/users/user.routes.js";
 import bcryptPlugin from "./plugins/bcrypt.js";
 import jwtPlugin from "./plugins/jwt.js";
 import mongoosePlugin from "./plugins/mongoose.js";
+import rateLimitPlugin from "./plugins/rate-limit.js";
 import scalarPlugin from "./plugins/scalar.js";
 import swaggerPlugin from "./plugins/swagger.js";
 
@@ -31,10 +37,15 @@ export interface BuildServerOptions {
    * Útil para injetar uma implementação falsa em testes.
    */
   userRepository?: IUserRepository;
+  /**
+   * Define quando deve registrar o rate limit.
+   * Configuração necessária para facilitar nos testes unitários
+   */
+  registerRateLimit?: boolean;
 }
 
 export async function buildServer(options?: BuildServerOptions) {
-  const { registerMongoose = true } = options ?? {};
+  const { registerMongoose = true, registerRateLimit = true } = options ?? {};
   const config = loadEnvConfig();
 
   const app = Fastify({ logger: false });
@@ -50,6 +61,10 @@ export async function buildServer(options?: BuildServerOptions) {
   await app.register(scalarPlugin);
   await app.register(jwtPlugin);
   await app.register(bcryptPlugin);
+
+  if (registerRateLimit) {
+    await app.register(rateLimitPlugin);
+  }
 
   if (registerMongoose) {
     await app.register(mongoosePlugin);
@@ -67,6 +82,14 @@ export async function buildServer(options?: BuildServerOptions) {
       });
     }
 
+    if (error instanceof RateLimitError) {
+      return reply.status(429).send({
+        statusCode: 429,
+        error: "Too Many Requests",
+        message: error.message,
+      });
+    }
+
     console.error(error);
 
     return reply.status(500).send({
@@ -79,6 +102,7 @@ export async function buildServer(options?: BuildServerOptions) {
   const userRepository = options?.userRepository ?? createMongooseUserRepository();
 
   await app.register(authRoutes, { prefix: "/auth", userRepository });
+  await app.register(userRoutes, { prefix: "/users", userRepository });
 
   app.get(
     "/health",
@@ -100,6 +124,7 @@ export async function buildServer(options?: BuildServerOptions) {
       },
       config: {
         isPublic: true,
+        rateLimit: false,
       },
     },
     async (): Promise<HealthResponse> => {
