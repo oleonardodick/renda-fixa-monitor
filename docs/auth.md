@@ -166,3 +166,5 @@ Variáveis relacionadas (ver `apps/backend/.env.example`):
 - `RATE_LIMIT_MAX` — máximo de requisições por janela de tempo (padrão `5`).
 - `RATE_LIMIT_WINDOW_MS` — janela do limite de requisições em milissegundos (padrão `900000`, 15 minutos).
 - `CORS_ORIGIN` — origem permitida com credenciais.
+
+Variáveis do Redis (infraestrutura, ainda sem uso pelas regras de autenticação): [docs/redis.md](redis.md).

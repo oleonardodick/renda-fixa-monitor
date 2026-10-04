@@ -43,6 +43,7 @@ Entre os principais objetivos estão:
 * Fastify
 * Mongoose
 * MongoDB
+* Redis
 * Zod
 * bcrypt
 * Scalar
@@ -229,6 +230,8 @@ O sistema utiliza autenticação stateless com JWT e cookies `HttpOnly`:
 
 Detalhes, regras de negócio e instruções para criar usuários de teste em [docs/auth.md](docs/auth.md).
 
+A infraestrutura Redis (conexão, ciclo de vida e uso pelas features) está em [docs/redis.md](docs/redis.md).
+
 ## Variáveis de ambiente
 
 As variáveis de ambiente específicas de cada aplicação devem permanecer dentro do respectivo workspace.
@@ -246,6 +249,8 @@ apps/
 Arquivos contendo informações sensíveis não devem ser versionados.
 
 Utilize os arquivos `.env.example` para documentar as variáveis necessárias sem incluir valores reais.
+
+A lista completa das variáveis do Redis e seus padrões está em [docs/redis.md](docs/redis.md).
 
 ## Arquitetura
 

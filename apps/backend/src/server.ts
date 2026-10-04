@@ -16,6 +16,7 @@ import bcryptPlugin from "./plugins/bcrypt.js";
 import jwtPlugin from "./plugins/jwt.js";
 import mongoosePlugin from "./plugins/mongoose.js";
 import rateLimitPlugin from "./plugins/rate-limit.js";
+import redisPlugin from "./plugins/redis.js";
 import scalarPlugin from "./plugins/scalar.js";
 import swaggerPlugin from "./plugins/swagger.js";
 
@@ -42,10 +43,16 @@ export interface BuildServerOptions {
    * Configuração necessária para facilitar nos testes unitários
    */
   registerRateLimit?: boolean;
+  /**
+   * Whether to register the Redis plugin (opens the Redis connection).
+   * Set to false for tests that should not depend on Redis.
+   * @default true
+   */
+  registerRedis?: boolean;
 }
 
 export async function buildServer(options?: BuildServerOptions) {
-  const { registerMongoose = true, registerRateLimit = true } = options ?? {};
+  const { registerMongoose = true, registerRateLimit = true, registerRedis = true } = options ?? {};
   const config = loadEnvConfig();
 
   const app = Fastify({ logger: false });
@@ -61,6 +68,10 @@ export async function buildServer(options?: BuildServerOptions) {
   await app.register(scalarPlugin);
   await app.register(jwtPlugin);
   await app.register(bcryptPlugin);
+
+  if (registerRedis) {
+    await app.register(redisPlugin);
+  }
 
   if (registerRateLimit) {
     await app.register(rateLimitPlugin);
