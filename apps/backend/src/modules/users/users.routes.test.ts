@@ -124,7 +124,11 @@ describe("POST /users", () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({ userId: "user-1" });
+      expect(response.json()).toEqual({
+        id: "user-1",
+        name: "Maria Oliveira",
+        email: "maria.oliveira@example.com",
+      });
     });
 
     it("não deve retornar dados sensíveis na resposta", async () => {
@@ -285,6 +289,7 @@ describe("POST /users", () => {
     it("deve retornar erro genérico quando a persistência falha", async () => {
       const failingRepository: IUserRepository = {
         findByEmail: async () => null,
+        findById: async () => null,
         create: async () => {
           throw new Error("conexão com o banco perdida");
         },

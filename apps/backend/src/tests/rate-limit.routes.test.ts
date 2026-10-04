@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildServer } from "../server.js";
-import { createInMemoryUserRepository } from "./helpers.js";
+import { createInMemoryUserRepository, getCookieValue } from "./helpers.js";
 
 process.env.JWT_SECRET ??= "test-access-secret";
 process.env.JWT_REFRESH_SECRET ??= "test-refresh-secret";
@@ -39,6 +39,18 @@ function signUp(index: number) {
   });
 }
 
+/**
+ * Cria uma instância isolada do servidor.
+ * O rate limit é global e contabilizado por IP, portanto cada cenário precisa
+ * de um contador próprio para não herdar o consumo dos demais.
+ */
+function createIsolatedApp() {
+  return buildServer({
+    registerMongoose: false,
+    userRepository: createInMemoryUserRepository(),
+  });
+}
+
 describe("rate limiting do cadastro", () => {
   it("deve bloquear com 429 em pt-BR ao exceder o limite de requisições", async () => {
     for (let index = 1; index <= RATE_LIMIT_MAX; index++) {
@@ -62,6 +74,80 @@ describe("rate limiting do cadastro", () => {
       const response = await app.inject({ method: "GET", url: "/health" });
 
       expect(response.statusCode).toBe(200);
+    }
+  });
+});
+
+describe("rate limiting global nas rotas de autenticação", () => {
+  it("deve cobrir POST /auth/login sem declarar um limiter dedicado", async () => {
+    const isolatedApp = await createIsolatedApp();
+
+    try {
+      for (let index = 1; index <= RATE_LIMIT_MAX; index++) {
+        const response = await isolatedApp.inject({
+          method: "POST",
+          url: "/auth/login",
+          payload: { email: "maria@example.com", password: "senha-errada" },
+        });
+
+        expect(response.statusCode).toBe(401);
+      }
+
+      const blocked = await isolatedApp.inject({
+        method: "POST",
+        url: "/auth/login",
+        payload: { email: "maria@example.com", password: "senha-errada" },
+      });
+
+      expect(blocked.statusCode).toBe(429);
+      expect(blocked.json()).toEqual({
+        statusCode: 429,
+        error: "Too Many Requests",
+        message: RATE_LIMIT_MESSAGE,
+      });
+    } finally {
+      await isolatedApp.close();
+    }
+  });
+
+  it("deve cobrir GET /auth/me sem declarar um limiter dedicado", async () => {
+    const isolatedApp = await createIsolatedApp();
+
+    try {
+      // A sessão consome uma requisição do limite, restando RATE_LIMIT_MAX - 1.
+      const signUpResponse = await isolatedApp.inject({
+        method: "POST",
+        url: "/users",
+        payload: {
+          name: "Maria Oliveira",
+          email: "maria@example.com",
+          password: "Senha@123",
+          confirmPassword: "Senha@123",
+        },
+      });
+
+      const cookies = { accessToken: getCookieValue(signUpResponse, "accessToken") };
+
+      for (let index = 1; index < RATE_LIMIT_MAX; index++) {
+        const response = await isolatedApp.inject({
+          method: "GET",
+          url: "/auth/me",
+          cookies,
+        });
+
+        expect(response.statusCode).toBe(200);
+      }
+
+      const blocked = await isolatedApp.inject({ method: "GET", url: "/auth/me", cookies });
+
+      expect(blocked.statusCode).toBe(429);
+      expect(blocked.json()).toEqual({
+        statusCode: 429,
+        error: "Too Many Requests",
+        message: RATE_LIMIT_MESSAGE,
+      });
+    } finally {
+      await isolatedApp.close();
     }
   });
 });

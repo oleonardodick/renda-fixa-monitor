@@ -12,8 +12,14 @@ function renderRouter(path: string) {
   );
 }
 
+const CURRENT_USER = {
+  id: "user-1",
+  name: "Maria Oliveira",
+  email: "maria.oliveira@example.com",
+};
+
 beforeEach(() => {
-  useAuthStore.setState({ status: "unauthenticated", userId: null });
+  useAuthStore.setState({ status: "unauthenticated", user: null });
 });
 
 describe("AppRouter", () => {
@@ -30,15 +36,23 @@ describe("AppRouter", () => {
   });
 
   it("deve renderizar o dashboard em /dashboard quando autenticado", () => {
-    useAuthStore.setState({ status: "authenticated", userId: "user-1" });
+    useAuthStore.setState({ status: "authenticated", user: CURRENT_USER });
 
     renderRouter("/dashboard");
 
     expect(screen.getByText(/Dashboard em construção/)).toBeInTheDocument();
   });
 
+  it("deve exibir o nome do usuário autenticado no dashboard", () => {
+    useAuthStore.setState({ status: "authenticated", user: CURRENT_USER });
+
+    renderRouter("/dashboard");
+
+    expect(screen.getByText(/Maria Oliveira/)).toBeInTheDocument();
+  });
+
   it("deve redirecionar rotas desconhecidas para o dashboard", () => {
-    useAuthStore.setState({ status: "authenticated", userId: "user-1" });
+    useAuthStore.setState({ status: "authenticated", user: CURRENT_USER });
 
     renderRouter("/rota-inexistente");
 

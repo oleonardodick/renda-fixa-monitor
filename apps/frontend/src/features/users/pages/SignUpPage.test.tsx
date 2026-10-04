@@ -25,12 +25,19 @@ function renderSignUpPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuthStore.setState({ status: "unauthenticated", userId: null });
+  useAuthStore.setState({ status: "unauthenticated", user: null });
 });
 
 describe("SignUpPage", () => {
   it("deve redirecionar para o dashboard quando o usuário já está autenticado", () => {
-    useAuthStore.setState({ status: "authenticated", userId: "user-1" });
+    useAuthStore.setState({
+      status: "authenticated",
+      user: {
+        id: "user-1",
+        name: "Maria Oliveira",
+        email: "maria.oliveira@example.com",
+      },
+    });
 
     renderSignUpPage();
 
@@ -51,11 +58,23 @@ describe("SignUpPage", () => {
 
   it("deve exibir estado de carregamento enquanto a sessão é resolvida", () => {
     vi.mocked(getSession).mockReturnValue(new Promise(() => {}));
-    useAuthStore.setState({ status: "loading", userId: null });
+    useAuthStore.setState({ status: "loading", user: null });
 
     renderSignUpPage();
 
     expect(screen.getByText("Carregando...")).toBeInTheDocument();
     expect(screen.queryByLabelText("Nome")).not.toBeInTheDocument();
+  });
+
+  it("deve informar quando a sessão não pode ser restaurada", async () => {
+    vi.mocked(getSession).mockRejectedValue(new Error("Network Error"));
+    useAuthStore.setState({ status: "loading", user: null });
+
+    renderSignUpPage();
+
+    const alert = await screen.findByRole("alert");
+
+    expect(alert).toHaveTextContent("Não foi possível carregar seus dados. Tente novamente.");
+    expect(screen.getByLabelText("Nome")).toBeInTheDocument();
   });
 });

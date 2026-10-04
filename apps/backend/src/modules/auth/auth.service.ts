@@ -1,5 +1,6 @@
-import { type SignInInput } from "@renda-fixa-monitor/shared";
+import { type CurrentUser, type SignInInput } from "@renda-fixa-monitor/shared";
 import { UnauthorizedError } from "../../errors/unauthorized-error.js";
+import { toCurrentUser } from "../users/user.mapper.js";
 import type { IUserRepository, User } from "../users/user.repository.js";
 import { INVALID_CREDENTIALS_MESSAGE } from "./auth.constants.js";
 
@@ -23,7 +24,8 @@ export interface AuthServiceDeps {
 }
 
 export interface SignInResult {
-  userId: string;
+  /** Dados públicos do usuário autenticado, limitados à allowlist da API. */
+  user: CurrentUser;
   accessToken: string;
   refreshToken: string;
 }
@@ -45,7 +47,7 @@ export function createSession(deps: AuthServiceDeps, user: User): SignInResult {
   const payload: AuthTokenPayload = { sub: user.id, email: user.email };
 
   return {
-    userId: user.id,
+    user: toCurrentUser(user),
     accessToken: deps.tokenSigner.signAccessToken(payload),
     refreshToken: deps.tokenSigner.signRefreshToken(payload),
   };

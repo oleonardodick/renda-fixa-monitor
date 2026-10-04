@@ -25,10 +25,19 @@ const authErrorSchema = {
   additionalProperties: false,
 } as const;
 
-const userIdResponseSchema = {
+/**
+ * Resposta com os dados do usuário autenticado.
+ * Espelha o schema estrito `currentUserSchema` do pacote `shared`: nenhum campo
+ * fora da allowlist (id, name, email) é serializado na resposta.
+ */
+const currentUserResponseSchema = {
   type: "object",
-  properties: { userId: { type: "string" } },
-  required: ["userId"],
+  properties: {
+    id: { type: "string" },
+    name: { type: "string" },
+    email: { type: "string" },
+  },
+  required: ["id", "name", "email"],
   additionalProperties: false,
 } as const;
 
@@ -49,9 +58,11 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
         description:
           "Valida as credenciais e retorna os tokens de acesso e de atualização " +
           "por meio de cookies HttpOnly (accessToken com validade de 1 hora e " +
-          "refreshToken com validade de 1 dia). Corpo esperado: { email, password }.",
+          "refreshToken com validade de 1 dia). Corpo esperado: { email, password }. " +
+          "Retorna { id, name, email } — nenhum dado sensível é incluído — e envia " +
+          "o cabeçalho Cache-Control: no-store.",
         response: {
-          200: userIdResponseSchema,
+          200: currentUserResponseSchema,
           400: authErrorSchema,
           401: authErrorSchema,
         },
@@ -83,15 +94,18 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
     {
       schema: {
         tags: ["auth"],
-        summary: "Retorna o usuário da sessão atual.",
+        summary: "Retorna os dados do usuário da sessão atual.",
         description:
-          "Exige um accessToken válido (cookie HttpOnly) e retorna o ID do usuário autenticado.",
+          "Exige um accessToken válido (cookie HttpOnly) e retorna { id, name, email }. " +
+          "A identidade vem exclusivamente do cookie — a rota não recebe identificador " +
+          "do cliente — e a resposta envia o cabeçalho Cache-Control: no-store. " +
+          "Sessão ausente, inválida, expirada ou de usuário inexistente resulta em 401.",
         response: {
-          200: userIdResponseSchema,
+          200: currentUserResponseSchema,
           401: authErrorSchema,
         },
       },
     },
-    createMeHandler(),
+    createMeHandler({ cookieSecure: config.cookieSecure, userRepository: options.userRepository }),
   );
 }

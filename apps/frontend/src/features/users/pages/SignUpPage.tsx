@@ -8,7 +8,7 @@ import { SignUpForm } from "../components/SignUpForm";
  * Usuários já autenticados são redirecionados para o Dashboard.
  */
 export function SignUpPage() {
-  const status = useSession();
+  const { status, errorMessage } = useSession();
 
   if (status === "loading") {
     return (
@@ -33,6 +33,12 @@ export function SignUpPage() {
           <CardDescription>Crie sua conta para acompanhar seus investimentos.</CardDescription>
         </CardHeader>
         <CardContent>
+          {errorMessage && (
+            <p role="alert" className="mb-3 text-sm text-destructive">
+              {errorMessage}
+            </p>
+          )}
+
           <SignUpForm />
           <div className="mt-3 text-center">
             <Link

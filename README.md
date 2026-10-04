@@ -222,9 +222,9 @@ pnpm --filter @renda-fixa-monitor/shared typecheck
 
 O sistema utiliza autenticação stateless com JWT e cookies `HttpOnly`:
 
-* `POST /auth/login` — autentica o usuário e define os cookies de sessão (`accessToken` com validade de 1 hora e `refreshToken` com validade de 1 dia);
+* `POST /auth/login` — autentica o usuário, retorna `{ id, name, email }` e define os cookies de sessão (`accessToken` com validade de 1 hora e `refreshToken` com validade de 1 dia);
 * `POST /auth/logout` — limpa os cookies de sessão;
-* `GET /auth/me` — retorna o usuário da sessão atual;
+* `GET /auth/me` — retorna `{ id, name, email }` do usuário da sessão atual, lidos do cookie de sessão;
 * `POST /users` — cadastro público de usuário: cria a conta e já inicia a sessão.
 
 Detalhes, regras de negócio e instruções para criar usuários de teste em [docs/auth.md](docs/auth.md).

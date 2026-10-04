@@ -3,11 +3,22 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SignUpForm } from "./SignUpForm";
 import { createUser } from "../services/userService";
+import { getSession } from "@/features/auth/services/authService";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 
 vi.mock("../services/userService", () => ({
   createUser: vi.fn(),
 }));
+
+vi.mock("@/features/auth/services/authService", () => ({
+  getSession: vi.fn(),
+}));
+
+const CURRENT_USER = {
+  id: "user-1",
+  name: "Maria Oliveira",
+  email: "maria.oliveira@example.com",
+};
 
 /** Erro de API no formato esperado pelo hook (envelope com erros por campo). */
 function apiError(status: number, message: string, errors?: { field: string; message: string }[]) {
@@ -54,7 +65,7 @@ function fillForm(values: {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuthStore.setState({ status: "unauthenticated", userId: null });
+  useAuthStore.setState({ status: "unauthenticated", user: null });
 });
 
 describe("SignUpForm", () => {
@@ -96,8 +107,9 @@ describe("SignUpForm", () => {
     expect(createUser).not.toHaveBeenCalled();
   });
 
-  it("deve criar a conta, iniciar a sessão e redirecionar para o dashboard", async () => {
+  it("deve criar a conta, preencher o store via /auth/me e redirecionar para o dashboard", async () => {
     vi.mocked(createUser).mockResolvedValue({ userId: "user-1" });
+    vi.mocked(getSession).mockResolvedValue(CURRENT_USER);
 
     renderSignUpForm();
     fillForm({});
@@ -110,8 +122,23 @@ describe("SignUpForm", () => {
       password: "Senha@123",
       confirmPassword: "Senha@123",
     });
+    // Os dados do usuário vêm do backend, e não do formulário.
+    expect(getSession).toHaveBeenCalledOnce();
     expect(useAuthStore.getState().status).toBe("authenticated");
-    expect(useAuthStore.getState().userId).toBe("user-1");
+    expect(useAuthStore.getState().user).toEqual(CURRENT_USER);
+  });
+
+  it("deve redirecionar mesmo se a leitura do usuário falhar, deixando a sessão em carregamento", async () => {
+    vi.mocked(createUser).mockResolvedValue({ userId: "user-1" });
+    vi.mocked(getSession).mockRejectedValue(new Error("Network Error"));
+
+    renderSignUpForm();
+    fillForm({});
+
+    await waitFor(() => expect(screen.getByText("dashboard-page")).toBeInTheDocument());
+
+    expect(useAuthStore.getState().status).toBe("loading");
+    expect(useAuthStore.getState().user).toBeNull();
   });
 
   it("deve exibir no campo e-mail o erro 409 de e-mail já cadastrado", async () => {

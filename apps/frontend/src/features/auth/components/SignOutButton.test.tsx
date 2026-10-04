@@ -22,9 +22,15 @@ function renderSignOutButton() {
   );
 }
 
+const CURRENT_USER = {
+  id: "user-1",
+  name: "Maria Oliveira",
+  email: "maria.oliveira@example.com",
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuthStore.setState({ status: "authenticated", userId: "user-1" });
+  useAuthStore.setState({ status: "authenticated", user: CURRENT_USER });
 });
 
 describe("SignOutButton", () => {
@@ -40,7 +46,7 @@ describe("SignOutButton", () => {
 
     expect(signOut).toHaveBeenCalledOnce();
     expect(useAuthStore.getState().status).toBe("unauthenticated");
-    expect(useAuthStore.getState().userId).toBeNull();
+    expect(useAuthStore.getState().user).toBeNull();
   });
 
   it("deve encerrar a sessão local mesmo quando a chamada ao servidor falha", async () => {

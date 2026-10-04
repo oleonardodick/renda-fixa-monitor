@@ -7,6 +7,8 @@ export interface InMemoryUserRepository extends IUserRepository {
   readonly users: User[];
   /** Limpa os usuários persistidos entre os testes. */
   reset(): void;
+  /** Remove um usuário persistido, simulando a exclusão da conta. */
+  remove(id: string): void;
 }
 
 /**
@@ -24,8 +26,20 @@ export function createInMemoryUserRepository(): InMemoryUserRepository {
       users.length = 0;
     },
 
+    remove(id: string): void {
+      const index = users.findIndex((user) => user.id === id);
+
+      if (index >= 0) {
+        users.splice(index, 1);
+      }
+    },
+
     async findByEmail(email: string): Promise<User | null> {
       return users.find((user) => user.email === email.toLowerCase()) ?? null;
+    },
+
+    async findById(id: string): Promise<User | null> {
+      return users.find((user) => user.id === id) ?? null;
     },
 
     async create({ name, email, passwordHash }: CreateUserData): Promise<User> {

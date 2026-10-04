@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CurrentUser } from "./user.js";
 
 export const signInSchema = z.object({
   email: z.email("Informe um e-mail válido."),
@@ -7,14 +8,15 @@ export const signInSchema = z.object({
 
 export type SignInInput = z.infer<typeof signInSchema>;
 
-export const signInResponseSchema = z.object({
-  userId: z.string(),
-});
+/**
+ * Resposta de `POST /auth/login`: os dados do usuário autenticado.
+ * Alias de `CurrentUser` para preservar o nome do contrato de autenticação
+ * sem duplicar o tipo.
+ */
+export type SignInResponse = CurrentUser;
 
-export type SignInResponse = z.infer<typeof signInResponseSchema>;
-
-/** Resposta de GET /auth/me: sessão atual do usuário autenticado. */
-export type AuthMeResponse = SignInResponse;
+/** Resposta de `GET /auth/me`: dados do usuário da sessão atual. */
+export type AuthMeResponse = CurrentUser;
 
 /**
  * Mensagem genérica de credenciais inválidas.

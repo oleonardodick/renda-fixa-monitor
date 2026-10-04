@@ -15,6 +15,10 @@ export async function signOut(): Promise<void> {
   await api.post("/auth/logout");
 }
 
+/**
+ * Recupera o usuário autenticado a partir do cookie HttpOnly da sessão.
+ * O frontend nunca manipula tokens: o cookie é enviado automaticamente.
+ */
 export async function getSession(): Promise<AuthMeResponse> {
   const { data } = await api.get<AuthMeResponse>("/auth/me");
 

@@ -45,7 +45,7 @@ export function createCreateUserHandler(deps: UserHandlerDeps) {
 
       setSessionCookies(reply, session, deps.cookieSecure);
 
-      await reply.status(201).send({ userId: session.userId } satisfies CreateUserResponse);
+      await reply.status(201).send({ userId: session.user.id } satisfies CreateUserResponse);
     } catch (error) {
       if (error instanceof DuplicateEmailError) {
         await reply.status(409).send({

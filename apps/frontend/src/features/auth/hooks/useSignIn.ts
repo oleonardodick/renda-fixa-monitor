@@ -21,7 +21,7 @@ export function useSignIn() {
 
     try {
       const response = await signIn(values);
-      setSession(response.userId);
+      setSession(response);
       navigate("/dashboard");
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 401) {

@@ -18,4 +18,11 @@ export const ACCESS_TOKEN_TTL = "1h";
 /** Tempo de vida do refresh token aceito pelo @fastify/jwt (1 dia). */
 export const REFRESH_TOKEN_TTL = "1d";
 
+/**
+ * Mensagem genérica de sessão ausente ou inválida.
+ * Não indica se o cookie faltou, expirou, era inválido ou se o usuário da
+ * sessão não existe mais.
+ */
+export const UNAUTHENTICATED_MESSAGE = "Token de autenticação inválido ou ausente.";
+
 export { INVALID_CREDENTIALS_MESSAGE };

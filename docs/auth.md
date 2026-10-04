@@ -6,9 +6,9 @@ Visão geral da autenticação baseada em JWT stateless com cookies `HttpOnly`.
 
 | Método | Rota | Acesso | Descrição |
 | --- | --- | --- | --- |
-| `POST` | `/auth/login` | Público | Valida e-mail e senha, inicia a sessão e define os cookies de autenticação. Retorna `{ userId }`. |
+| `POST` | `/auth/login` | Público | Valida e-mail e senha, inicia a sessão e define os cookies de autenticação. Retorna `{ id, name, email }`. |
 | `POST` | `/auth/logout` | Público | Limpa os cookies de sessão e retorna `204 No Content`. |
-| `GET` | `/auth/me` | Protegido | Retorna `{ userId }` da sessão atual a partir do cookie `accessToken`. |
+| `GET` | `/auth/me` | Protegido | Retorna `{ id, name, email }` do usuário da sessão atual, lidos do cookie `accessToken`. |
 | `POST` | `/users` | Público | Cadastra o usuário, inicia a sessão e retorna `{ userId }`. Sujeito a rate limiting. |
 
 A documentação interativa (Scalar) está disponível em `/docs`.
@@ -29,7 +29,32 @@ Configuração dos cookies:
 - `Secure`: habilitado em produção (`NODE_ENV=production`) ou quando `COOKIE_SECURE=true`.
 - `Path=/`.
 
-A sessão **não é persistida no banco de dados** (JWT stateless). O endpoint `/auth/me` existe porque os cookies `HttpOnly` não são legíveis via JavaScript; ele permite ao frontend restaurar a sessão após um refresh da página.
+A sessão **não é persistida no banco de dados** (JWT stateless). O endpoint `/auth/me` existe porque os cookies `HttpOnly` não são legíveis via JavaScript; ele permite ao frontend restaurar a sessão e os dados do usuário após um refresh da página.
+
+## Dados do usuário autenticado
+
+`POST /auth/login` e `GET /auth/me` retornam os mesmos campos:
+
+```json
+{ "id": "68d0f2a1b4c3d5e6f7a8b9c0", "name": "Maria Oliveira", "email": "maria.oliveira@example.com" }
+```
+
+- **Allowlist explícita:** os dados são montados por `toCurrentUser`, que seleciona apenas `id`, `name` e `email`. `passwordHash` e qualquer campo interno nunca fazem parte da resposta, em vez de serem removidos depois. O schema `currentUserSchema` do pacote `shared` é estrito e rejeita campos adicionais, e o schema de resposta da API declara `additionalProperties: false` — uma falha em qualquer camada impede o vazamento.
+- **Contrato único:** o schema Zod `currentUserSchema` e o tipo `CurrentUser` são definidos em `packages/shared` e usados pelo backend e pelo frontend. `SignInResponse` e `AuthMeResponse` são aliases desse mesmo tipo.
+- **E-mail:** retornado como persistido, em minúsculas.
+- **Sem cache:** ambas as respostas enviam `Cache-Control: no-store`, para que navegadores e intermediários não armazenem dados do usuário.
+
+### `GET /auth/me`
+
+A rota existe desde a feature de Login e foi **ajustada** (e não substituída) para retornar os dados do usuário: ela já era a rota protegida, lida apenas pelo cookie de sessão e já era usada pelo frontend para restaurar a sessão, portanto não há rota duplicada.
+
+- **Identidade somente pelo cookie:** a rota não recebe `id` em query, params ou body; qualquer identificador enviado pelo cliente é ignorado e a resposta traz apenas o usuário da sessão. Não há superfície de IDOR.
+- **Reutiliza o middleware existente:** a validação do token e do cookie é a do middleware `authenticate`; o backend não reimplementa a verificação.
+- **Sessão ausente, inválida ou expirada:** `401` com a mensagem genérica `"Token de autenticação inválido ou ausente."`, no formato padrão de erro da API.
+- **Usuário removido depois de a sessão ser emitida:** também `401`, e os cookies de sessão são limpos para que a sessão não permaneça ativa.
+- **Falha de banco:** `500` com a mensagem genérica `"Erro interno do servidor."`, sem detalhes internos.
+
+O contrato de `POST /users` não muda: o cadastro continua retornando apenas `{ userId }`. O frontend preenche o store chamando `GET /auth/me` após o cadastro, usando a mesma consulta do recarregamento de página.
 
 ## Regras de negócio
 
@@ -76,11 +101,13 @@ As regras abaixo são definidas uma única vez no schema `createUserSchema` do p
 - **Confirmação de senha:** deve ser idêntica à senha. `confirmPassword` é enviado ao backend apenas para validação e nunca é persistido nem registrado em log.
 - **E-mail único:** garantido pela verificação na aplicação e pelo índice único do banco. Colisões entre requisições simultâneas são tratadas como `409` (e-mail já cadastrado), nunca como erro genérico.
 - **Senha no banco:** gravada somente como hash bcrypt, com custo definido por `BCRYPT_SALT_ROUNDS`.
-- **Rate limiting:** a rota é limitada por IP para conter criação em massa e enumeração de e-mails (ver `SIGNUP_RATE_LIMIT_MAX`). O cadastro informa explicitamente que o e-mail já existe, decisão mitigada por esse limite.
+- **Rate limiting:** a rota é limitada por IP para conter criação em massa e enumeração de e-mails (ver `RATE_LIMIT_MAX`). O cadastro informa explicitamente que o e-mail já existe, decisão mitigada por esse limite.
 
 ### Rate limiting
 
-O plugin `@fastify/rate-limit` é registrado com `global: false`: apenas as rotas que declaram `config.rateLimit` são limitadas. Os presets ficam em `apps/backend/src/config/rate-limit.ts`. Para novas rotas protegidas, basta adicionar uma entrada e referenciá-la em `config: { rateLimit: rateLimits.<chave> }`. Para limitar todas as rotas, altere `global: false` para `true` e isente as exceções com `config: { rateLimit: false }`.
+O plugin `@fastify/rate-limit` é registrado com `global: true`, portanto **todas as rotas são limitadas**, com o limite definido por `RATE_LIMIT_MAX` e `RATE_LIMIT_WINDOW_MS` (ver `apps/backend/src/config/env.ts`). Rotas que precisam ficar sem limite declaram `config: { rateLimit: false }`, como é o caso de `/health`.
+
+Isso inclui `POST /auth/login` e `GET /auth/me`, que **não declaram um limiter dedicado** — a cobertura global é suficiente e um limiter por rota seria redundante. A cobertura é verificada em `apps/backend/src/tests/rate-limit.routes.test.ts`.
 
 ## Frontend
 
@@ -88,8 +115,35 @@ O plugin `@fastify/rate-limit` é registrado com `global: false`: apenas as rota
 - Feature `features/users`: página de cadastro (`/register`) com nome, e-mail, senha e confirmação de senha. Usa o mesmo schema `createUserSchema` do `shared`, exibe os erros retornados pela API no campo correspondente, move o foco para o primeiro campo inválido, mantém nome e e-mail e limpa as senhas quando a requisição falha. O link "Não tem uma conta? Criar Conta" fica na tela de login e a tela de cadastro tem o link "Já tem uma conta? Entrar".
 - Usuários já autenticados que acessam `/register` são redirecionados para o `/dashboard`.
 - A sessão é gerenciada pelo store `authStore` (Zustand) e resolvida via `/auth/me` no `ProtectedRoute`, que protege `/dashboard`.
+
+### Store do usuário autenticado
+
+`apps/frontend/src/features/auth/stores/authStore.ts` guarda a sessão e fica disponível para toda a aplicação:
+
+| Estado | Descrição |
+| --- | --- |
+| `status` | `"loading"` (inicial, aguardando resolução), `"authenticated"` ou `"unauthenticated"`. |
+| `user` | `{ id, name, email }` do usuário autenticado, ou `null`. |
+| `setSession(user)` | Autentica a sessão com os dados do usuário. |
+| `clearSession()` | Encerra a sessão e descarta os dados do usuário. |
+| `resetSession()` | Volta a `"loading"`, para que a sessão seja resolvida novamente. |
+
+Regras de uso:
+
+- **Somente em memória:** o store não usa middleware de persistência. Os dados do usuário nunca são gravados em `localStorage`, `sessionStorage` ou qualquer outro armazenamento do navegador; a fonte da verdade é sempre o backend, restaurada via `/auth/me`.
+- **Leitura por seletor:** os componentes leem o usuário por seletores (`useAuthStore((state) => state.user)`), evitando re-renderizações desnecessárias. A página de Dashboard consome o nome do usuário apenas para comprovar a integração.
+- **Preenchimento:** após o login e após o cadastro (que chama `/auth/me`, já que o cadastro retorna apenas `{ userId }`).
+- **Restauração:** no carregamento da página, `useSession` chama `/auth/me` enquanto o store está em `"loading"`, antes de renderizar o conteúdo protegido.
+- **Limpeza:** no logout e sempre que a sessão não puder ser restaurada.
+- **Erros:** `401` leva ao redirecionamento para `/login`, como antes. Falhas inesperadas (rede ou servidor) exibem a mensagem genérica `"Não foi possível carregar seus dados. Tente novamente."`, mantêm o store vazio e não interrompem a aplicação.
+
 - O botão "Sair" (`SignOutButton`) chama `/auth/logout`, limpa o estado local e redireciona para `/login`. Sua posição final será definida pela feature de Dashboard.
 - O link "Esqueci minha senha" está presente no login, sem lógica implementada por enquanto.
+
+## Lacunas conhecidas
+
+- **Não existe fluxo de renovação de sessão.** O cookie `refreshToken` é emitido no login e no cadastro, mas nenhuma rota o utiliza para gerar um novo access token. Quando o access token expira (1 hora), a sessão é encerrada e o usuário precisa entrar novamente. Criar a renovação está fora do escopo desta feature e exigiria um novo contrato de endpoint.
+- **CSRF:** a proteção existente é `SameSite=Lax` combinado com o CORS que aceita credenciais apenas de `CORS_ORIGIN`. `GET /auth/me` é somente leitura e não altera estado. Não há token anti-CSRF para as rotas que alteram estado.
 
 ## Criando usuários para teste
 
@@ -109,6 +163,6 @@ Variáveis relacionadas (ver `apps/backend/.env.example`):
 - `JWT_REFRESH_SECRET` — segredo do refresh token (obrigatório).
 - `COOKIE_SECURE` — força o atributo `Secure` nos cookies (`false` por padrão em desenvolvimento).
 - `BCRYPT_SALT_ROUNDS` — custo do hash bcrypt das senhas.
-- `SIGNUP_RATE_LIMIT_MAX` — máximo de cadastros por janela de tempo (padrão `5`).
-- `SIGNUP_RATE_LIMIT_WINDOW_MS` — janela do limite de cadastros em milissegundos (padrão `900000`, 15 minutos).
+- `RATE_LIMIT_MAX` — máximo de requisições por janela de tempo (padrão `5`).
+- `RATE_LIMIT_WINDOW_MS` — janela do limite de requisições em milissegundos (padrão `900000`, 15 minutos).
 - `CORS_ORIGIN` — origem permitida com credenciais.

@@ -7,6 +7,7 @@ import { isAxiosError } from "axios";
 import { useState } from "react";
 import type { UseFormResetField, UseFormSetError, UseFormSetFocus } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { getSession } from "@/features/auth/services/authService";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import { createUser } from "../services/userService";
 
@@ -44,6 +45,7 @@ function parseApiFieldErrors(error: unknown): ApiFieldError[] {
 export function useSignUp() {
   const navigate = useNavigate();
   const setSession = useAuthStore((state) => state.setSession);
+  const resetSession = useAuthStore((state) => state.resetSession);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   /**
@@ -74,9 +76,20 @@ export function useSignUp() {
     setErrorMessage(null);
 
     try {
-      const response = await createUser(values);
+      await createUser(values);
 
-      setSession(response.userId);
+      // O cadastro retorna apenas o ID: os dados do usuário são recuperados
+      // pela mesma consulta usada ao recarregar a página, mantendo o backend
+      // como única fonte da verdade. Se a consulta falhar, a sessão fica em
+      // "loading" e é resolvida pela rota protegida após o redirecionamento.
+      const user = await getSession().catch(() => null);
+
+      if (user) {
+        setSession(user);
+      } else {
+        resetSession();
+      }
+
       navigate("/dashboard");
     } catch (error) {
       const status = isAxiosError(error) ? error.response?.status : undefined;

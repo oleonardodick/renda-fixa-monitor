@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { IUserRepository, User } from "../users/user.repository.js";
 import { buildServer } from "../../server.js";
 import { getCookieEntries, getCookieValue } from "../../tests/helpers.js";
@@ -20,6 +20,7 @@ const fakeUser: User = {
 
 const userRepository: IUserRepository = {
   findByEmail: async (email) => (email === TEST_EMAIL ? fakeUser : null),
+  findById: async (id) => (id === fakeUser.id ? fakeUser : null),
   // A criação de usuário é coberta pelos testes de POST /users.
   create: async () => {
     throw new Error("Criação de usuário não é exercitada neste teste.");
@@ -38,7 +39,7 @@ afterAll(async () => {
 });
 
 describe("POST /auth/login", () => {
-  it("deve autenticar o usuário e iniciar a sessão com cookies HttpOnly", async () => {
+  it("deve autenticar o usuário, retornar os dados e iniciar a sessão com cookies HttpOnly", async () => {
     const response = await app.inject({
       method: "POST",
       url: "/auth/login",
@@ -46,7 +47,11 @@ describe("POST /auth/login", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ userId: fakeUser.id });
+    expect(response.json()).toEqual({
+      id: fakeUser.id,
+      name: "Maria Oliveira",
+      email: TEST_EMAIL,
+    });
 
     const entries = getCookieEntries(response);
     const accessCookie = entries.find((header) => header.startsWith("accessToken="));
@@ -80,6 +85,29 @@ describe("POST /auth/login", () => {
     expect(refreshPayload).not.toBeNull();
     expect(refreshPayload!.sub).toBe(fakeUser.id);
     expect(refreshPayload!.exp - refreshPayload!.iat).toBe(24 * 60 * 60);
+  });
+
+  it("não deve retornar campos fora da allowlist nem dados sensíveis", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: TEST_EMAIL, password: TEST_PASSWORD },
+    });
+
+    expect(Object.keys(response.json())).toEqual(["id", "name", "email"]);
+    expect(response.body).not.toContain("passwordHash");
+    expect(response.body).not.toContain(fakeUser.passwordHash);
+    expect(response.body).not.toContain(TEST_PASSWORD);
+  });
+
+  it("não deve permitir que os dados do usuário sejam armazenados em cache", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: TEST_EMAIL, password: TEST_PASSWORD },
+    });
+
+    expect(response.headers["cache-control"]).toBe("no-store");
   });
 
   it("deve retornar erro genérico quando a senha está incorreta", async () => {
@@ -154,25 +182,99 @@ describe("POST /auth/logout", () => {
 });
 
 describe("GET /auth/me", () => {
-  it("deve retornar o usuário da sessão quando autenticado por cookie", async () => {
+  /** Autentica via login e devolve o cookie de acesso da sessão. */
+  async function signInCookie(): Promise<string> {
     const login = await app.inject({
       method: "POST",
       url: "/auth/login",
       payload: { email: TEST_EMAIL, password: TEST_PASSWORD },
     });
 
+    return getCookieValue(login, "accessToken");
+  }
+
+  it("deve retornar os dados do usuário da sessão quando autenticado por cookie", async () => {
     const response = await app.inject({
       method: "GET",
       url: "/auth/me",
-      cookies: { accessToken: getCookieValue(login, "accessToken") },
+      cookies: { accessToken: await signInCookie() },
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ userId: fakeUser.id });
+    expect(response.json()).toEqual({
+      id: fakeUser.id,
+      name: "Maria Oliveira",
+      email: TEST_EMAIL,
+    });
+  });
+
+  it("não deve retornar campos fora da allowlist nem dados sensíveis", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/auth/me",
+      cookies: { accessToken: await signInCookie() },
+    });
+
+    expect(Object.keys(response.json())).toEqual(["id", "name", "email"]);
+    expect(response.body).not.toContain("passwordHash");
+    expect(response.body).not.toContain(fakeUser.passwordHash);
+  });
+
+  it("não deve permitir que os dados do usuário sejam armazenados em cache", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/auth/me",
+      cookies: { accessToken: await signInCookie() },
+    });
+
+    expect(response.headers["cache-control"]).toBe("no-store");
+  });
+
+  it("deve ignorar qualquer identificador enviado pelo cliente", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/auth/me?userId=user-999&id=user-999",
+      cookies: { accessToken: await signInCookie() },
+      payload: { userId: "user-999" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().id).toBe(fakeUser.id);
   });
 
   it("deve rejeitar a rota protegida sem access token", async () => {
     const response = await app.inject({ method: "GET", url: "/auth/me" });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({
+      statusCode: 401,
+      error: "Unauthorized",
+      message: "Token de autenticação inválido ou ausente.",
+    });
+  });
+
+  it("deve rejeitar um access token inválido", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/auth/me",
+      cookies: { accessToken: "token-adulterado" },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json().message).toBe("Token de autenticação inválido ou ausente.");
+  });
+
+  it("deve rejeitar um access token expirado", async () => {
+    const expiredToken = app.jwt.access.sign(
+      { sub: fakeUser.id, email: TEST_EMAIL },
+      { expiresIn: "-1s" },
+    );
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/auth/me",
+      cookies: { accessToken: expiredToken },
+    });
 
     expect(response.statusCode).toBe(401);
     expect(response.json().message).toBe("Token de autenticação inválido ou ausente.");
@@ -191,6 +293,77 @@ describe("GET /auth/me", () => {
     });
 
     expect(response.statusCode).toBe(401);
+  });
+
+  it("deve encerrar a sessão quando o usuário da sessão não existe mais", async () => {
+    const accessToken = await signInCookie();
+    // Simula a exclusão da conta depois que a sessão foi emitida.
+    const emptyRepository: IUserRepository = {
+      findByEmail: async () => null,
+      findById: async () => null,
+      create: userRepository.create,
+    };
+    const orphanApp = await buildServer({
+      registerMongoose: false,
+      userRepository: emptyRepository,
+      registerRateLimit: false,
+    });
+
+    try {
+      const response = await orphanApp.inject({
+        method: "GET",
+        url: "/auth/me",
+        cookies: { accessToken },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().message).toBe("Token de autenticação inválido ou ausente.");
+
+      // A sessão não pode continuar ativa: os cookies são removidos.
+      const entries = getCookieEntries(response);
+
+      expect(entries.find((header) => header.startsWith("accessToken=;"))).toBeDefined();
+      expect(entries.find((header) => header.startsWith("refreshToken=;"))).toBeDefined();
+    } finally {
+      await orphanApp.close();
+    }
+  });
+
+  it("deve retornar erro genérico quando a leitura do usuário falha", async () => {
+    const accessToken = await signInCookie();
+    const failingRepository: IUserRepository = {
+      findByEmail: async () => null,
+      findById: async () => {
+        throw new Error("conexão com o banco perdida");
+      },
+      create: userRepository.create,
+    };
+    const failingApp = await buildServer({
+      registerMongoose: false,
+      userRepository: failingRepository,
+      registerRateLimit: false,
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    try {
+      const response = await failingApp.inject({
+        method: "GET",
+        url: "/auth/me",
+        cookies: { accessToken },
+      });
+
+      expect(response.statusCode).toBe(500);
+      expect(response.json()).toEqual({
+        statusCode: 500,
+        error: "Internal Server Error",
+        message: "Erro interno do servidor.",
+      });
+      expect(response.body).not.toContain("conexão com o banco perdida");
+      expect(JSON.stringify(consoleError.mock.calls)).not.toContain(TEST_PASSWORD);
+    } finally {
+      consoleError.mockRestore();
+      await failingApp.close();
+    }
   });
 });
 

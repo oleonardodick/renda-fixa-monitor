@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createUserSchema } from "./user.js";
+import { createUserSchema, currentUserSchema } from "./user.js";
 
 /** Senha que atende às 4 regras de composição. */
 const VALID_PASSWORD = "Senha@123";
@@ -205,5 +205,36 @@ describe("createUserSchema", () => {
         "Informe a confirmação da senha.",
       );
     });
+  });
+});
+
+describe("currentUserSchema", () => {
+  const CURRENT_USER = {
+    id: "68d0f2a1b4c3d5e6f7a8b9c0",
+    name: "Maria Oliveira",
+    email: "maria.oliveira@example.com",
+  };
+
+  it("deve aceitar os dados do usuário autenticado", () => {
+    const result = currentUserSchema.safeParse(CURRENT_USER);
+
+    expect(result.success).toBe(true);
+    expect(result.success && result.data).toEqual(CURRENT_USER);
+  });
+
+  it("deve rejeitar campos adicionais como password", () => {
+    expect(currentUserSchema.safeParse({ ...CURRENT_USER, password: "Senha@123" }).success).toBe(
+      false,
+    );
+  });
+
+  it("deve rejeitar campos adicionais como passwordHash", () => {
+    expect(
+      currentUserSchema.safeParse({ ...CURRENT_USER, passwordHash: "$2b$10$hash" }).success,
+    ).toBe(false);
+  });
+
+  it("deve rejeitar um usuário sem algum dos campos obrigatórios", () => {
+    expect(currentUserSchema.safeParse({ ...CURRENT_USER, email: undefined }).success).toBe(false);
   });
 });

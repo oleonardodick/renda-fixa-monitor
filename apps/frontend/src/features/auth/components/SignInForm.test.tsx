@@ -11,6 +11,12 @@ vi.mock("../services/authService", () => ({
   getSession: vi.fn(),
 }));
 
+const CURRENT_USER = {
+  id: "user-1",
+  name: "Maria Oliveira",
+  email: "maria.oliveira@example.com",
+};
+
 function renderSignInForm() {
   return render(
     <MemoryRouter initialEntries={["/login"]}>
@@ -30,7 +36,9 @@ function fillCredentials(email: string, password: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuthStore.setState({ status: "loading", userId: null });
+  localStorage.clear();
+  sessionStorage.clear();
+  useAuthStore.setState({ status: "loading", user: null });
 });
 
 describe("SignInForm", () => {
@@ -60,8 +68,8 @@ describe("SignInForm", () => {
     expect(signIn).not.toHaveBeenCalled();
   });
 
-  it("deve iniciar a sessão e redirecionar para o dashboard após o login", async () => {
-    vi.mocked(signIn).mockResolvedValue({ userId: "user-1" });
+  it("deve iniciar a sessão, preencher o store e redirecionar para o dashboard após o login", async () => {
+    vi.mocked(signIn).mockResolvedValue(CURRENT_USER);
 
     renderSignInForm();
     fillCredentials("maria.oliveira@example.com", "senha-123");
@@ -75,7 +83,21 @@ describe("SignInForm", () => {
       password: "senha-123",
     });
     expect(useAuthStore.getState().status).toBe("authenticated");
-    expect(useAuthStore.getState().userId).toBe("user-1");
+    expect(useAuthStore.getState().user).toEqual(CURRENT_USER);
+  });
+
+  it("não deve gravar os dados do usuário em localStorage ou sessionStorage", async () => {
+    vi.mocked(signIn).mockResolvedValue(CURRENT_USER);
+
+    renderSignInForm();
+    fillCredentials("maria.oliveira@example.com", "senha-123");
+
+    await waitFor(() =>
+      expect(screen.getByText("dashboard-page")).toBeInTheDocument(),
+    );
+
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
   });
 
   it("deve exibir mensagem genérica quando as credenciais são inválidas", async () => {

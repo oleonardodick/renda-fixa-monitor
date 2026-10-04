@@ -90,3 +90,22 @@ export const createUserResponseSchema = z.object({
 });
 
 export type CreateUserResponse = z.infer<typeof createUserResponseSchema>;
+
+/**
+ * Dados do usuário autenticado expostos pela API (`POST /auth/login` e
+ * `GET /auth/me`).
+ *
+ * A allowlist é estrita: campos fora de `id`, `name` e `email` — como
+ * `password` ou `passwordHash` — são rejeitados na validação, garantindo que
+ * nenhum dado sensível ou interno vaze por engano na resposta.
+ */
+export const currentUserSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    /** Persistido em minúsculas pelo schema do usuário. */
+    email: z.string(),
+  })
+  .strict();
+
+export type CurrentUser = z.infer<typeof currentUserSchema>;

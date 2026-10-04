@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { DuplicateEmailError } from "../../errors/duplicate-email-error.js";
 import { UserModel } from "../../models/user.model.js";
 
@@ -25,6 +26,7 @@ export interface CreateUserData {
  */
 export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
+  findById(id: string): Promise<User | null>;
   create(user: CreateUserData): Promise<User>;
 }
 
@@ -33,6 +35,21 @@ const DUPLICATE_KEY_ERROR_CODE = 11000;
 
 function isDuplicateKeyError(error: unknown): boolean {
   return (error as { code?: number } | null)?.code === DUPLICATE_KEY_ERROR_CODE;
+}
+
+/** Mapeia um documento do MongoDB para a representação de domínio. */
+function toUser(document: {
+  _id: { toString(): string };
+  name: string;
+  email: string;
+  passwordHash: string;
+}): User {
+  return {
+    id: document._id.toString(),
+    name: document.name,
+    email: document.email,
+    passwordHash: document.passwordHash,
+  };
 }
 
 export function createMongooseUserRepository(): IUserRepository {
@@ -44,24 +61,31 @@ export function createMongooseUserRepository(): IUserRepository {
         return null;
       }
 
-      return {
-        id: document._id.toString(),
-        name: document.name,
-        email: document.email,
-        passwordHash: document.passwordHash,
-      };
+      return toUser(document);
+    },
+
+    async findById(id: string): Promise<User | null> {
+      // Um ID malformado não é um usuário inexistente do ponto de vista do
+      // chamador: ambos resultam em "não encontrado", evitando que uma falha
+      // de persistência seja reportada como erro interno.
+      if (!Types.ObjectId.isValid(id)) {
+        return null;
+      }
+
+      const document = await UserModel.findById(id);
+
+      if (!document) {
+        return null;
+      }
+
+      return toUser(document);
     },
 
     async create({ name, email, passwordHash }: CreateUserData): Promise<User> {
       try {
         const document = await UserModel.create({ name, email, passwordHash });
 
-        return {
-          id: document._id.toString(),
-          name: document.name,
-          email: document.email,
-          passwordHash: document.passwordHash,
-        };
+        return toUser(document);
       } catch (error) {
         // Requisições simultâneas com o mesmo e-mail violam o índiceúnico do
         // banco. Isso é um conflito de domínio, não uma falha inesperada.
