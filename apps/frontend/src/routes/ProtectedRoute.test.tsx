@@ -2,10 +2,10 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProtectedRoute } from "./ProtectedRoute";
-import { getSession } from "../services/authService";
-import { useAuthStore } from "../stores/authStore";
+import { getSession } from "@/features/auth/services/authService";
+import { useAuthStore } from "@/features/auth/stores/authStore";
 
-vi.mock("../services/authService", () => ({
+vi.mock("@/features/auth/services/authService", () => ({
   signIn: vi.fn(),
   signOut: vi.fn(),
   getSession: vi.fn(),

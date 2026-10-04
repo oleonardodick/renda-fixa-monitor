@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { useSession } from "../hooks/useSession";
+import { useSession } from "@/features/auth/hooks/useSession";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const status = useSession();
