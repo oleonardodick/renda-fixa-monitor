@@ -3,7 +3,6 @@ import { buildServer } from "../server.js";
 import { createInMemoryUserRepository, getCookieValue } from "./helpers.js";
 
 process.env.JWT_SECRET ??= "test-access-secret";
-process.env.JWT_REFRESH_SECRET ??= "test-refresh-secret";
 process.env.BCRYPT_SALT_ROUNDS ??= "4";
 // Limite baixo para exercitar o bloqueio sem reenviar muitas requisições.
 process.env.RATE_LIMIT_MAX = "2";

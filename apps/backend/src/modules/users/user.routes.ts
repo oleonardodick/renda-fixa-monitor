@@ -62,8 +62,8 @@ export async function userRoutes(app: FastifyInstance, options: UserRoutesOption
           "Os dados são validados com o schema compartilhado `createUserSchema` " +
           "(o mesmo do frontend), o usuário é persistido com a senha hashada via " +
           "bcrypt e os tokens de sessão são retornados por cookies HttpOnly " +
-          "(accessToken com validade de 1 hora e refreshToken com validade de " +
-          "1 dia). E-mail já cadastrado retorna 409 com o erro no campo email. " +
+          "(accessToken com validade de 1 hora). " +
+          "E-mail já cadastrado retorna 409 com o erro no campo email. " +
           "Sujeito a rate limiting.",
         response: {
           201: userIdResponseSchema,

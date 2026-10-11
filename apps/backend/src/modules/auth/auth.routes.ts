@@ -56,9 +56,9 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
         tags: ["auth"],
         summary: "Autentica o usuário e inicia uma sessão.",
         description:
-          "Valida as credenciais e retorna os tokens de acesso e de atualização " +
-          "por meio de cookies HttpOnly (accessToken com validade de 1 hora e " +
-          "refreshToken com validade de 1 dia). Corpo esperado: { email, password }. " +
+          "Valida as credenciais e retorna o token de acesso " +
+          "por meio de cookies HttpOnly (accessToken com validade de 1 hora). " +
+          "Corpo esperado: { email, password }. " +
           "Retorna { id, name, email } — nenhum dado sensível é incluído — e envia " +
           "o cabeçalho Cache-Control: no-store.",
         response: {
@@ -78,8 +78,7 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
       schema: {
         tags: ["auth"],
         summary: "Encerra a sessão do usuário.",
-        description:
-          "Limpa os cookies de sessão (accessToken e refreshToken) e retorna 204 sem conteúdo.",
+        description: "Limpa os cookies de sessão (accessToken) e retorna 204 sem conteúdo.",
         response: {
           401: authErrorSchema,
         },

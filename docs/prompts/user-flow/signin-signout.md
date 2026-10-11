@@ -15,8 +15,7 @@ To access all the functionalities of the system, users must be logged in. This f
 - Allow users to input their email and password.
 - Validate the submitted data. If successful, create a new user session.
 - Generate an access token using the existing JWT plugin, with a 1-hour expiration.
-- Generate a refresh token, with a 1-day expiration.
-- Securely store the access token and refresh token using HttpOnly cookies.
+- Securely store the access token using HttpOnly cookies.
 - On logout, clear the authentication cookies and redirect to the login page.
 
 ## Business Rules
@@ -29,7 +28,6 @@ To access all the functionalities of the system, users must be logged in. This f
 - Validation errors for input format (e.g., invalid email format, empty password) must be displayed specifically under their respective form fields.
 - When successful, return the user ID and necessary success metadata to the frontend.
 - The access token must have a 1-hour expiration.
-- The refresh token must have a 1-day expiration.
 - On logout, invalidate/clear the session cookies.
 - All user-facing messages must be in Brazilian Portuguese (pt-BR).
 
@@ -132,7 +130,6 @@ After implementation:
 - [ ] The user can login to the system.
 - [ ] The response/error does not reveal whether the email or password is wrong.
 - [ ] The access token is created via JWT and has an expiration period of 1 hour.
-- [ ] The refresh token is created and has an expiration period of 1 day.
 - [ ] Tokens are securely stored via HttpOnly cookies.
 - [ ] The user ID is returned in the response.
 - [ ] The user can logout of the system and clear cookies.

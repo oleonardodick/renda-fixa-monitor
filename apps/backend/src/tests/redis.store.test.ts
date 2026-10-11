@@ -22,11 +22,11 @@ describe("abstração de operações do Redis", () => {
   describe("get", () => {
     it("deve ler a chave com o prefixo configurado", async () => {
       const client = createFakeRedisClient({
-        get: vi.fn().mockResolvedValue("token-de-refresh"),
+        get: vi.fn().mockResolvedValue("chave-teste"),
       });
       const store = createNodeRedisStore(client, KEY_PREFIX);
 
-      await expect(store.get("session:123")).resolves.toBe("token-de-refresh");
+      await expect(store.get("session:123")).resolves.toBe("chave-teste");
       expect(client.get).toHaveBeenCalledWith(`${KEY_PREFIX}session:123`);
     });
 
@@ -43,18 +43,18 @@ describe("abstração de operações do Redis", () => {
       const client = createFakeRedisClient();
       const store = createNodeRedisStore(client, KEY_PREFIX);
 
-      await store.set("session:123", "token-de-refresh");
+      await store.set("session:123", "chave-teste");
 
-      expect(client.set).toHaveBeenCalledWith(`${KEY_PREFIX}session:123`, "token-de-refresh");
+      expect(client.set).toHaveBeenCalledWith(`${KEY_PREFIX}session:123`, "chave-teste");
     });
 
     it("deve aplicar a expiração em segundos quando há TTL", async () => {
       const client = createFakeRedisClient();
       const store = createNodeRedisStore(client, KEY_PREFIX);
 
-      await store.set("session:123", "token-de-refresh", { ttlSeconds: 900 });
+      await store.set("session:123", "chave-teste", { ttlSeconds: 900 });
 
-      expect(client.set).toHaveBeenCalledWith(`${KEY_PREFIX}session:123`, "token-de-refresh", {
+      expect(client.set).toHaveBeenCalledWith(`${KEY_PREFIX}session:123`, "chave-teste", {
         expiration: { type: "EX", value: 900 },
       });
     });

@@ -4,7 +4,6 @@ export interface EnvConfig {
   corsOrigin: string;
   mongodbUri: string | undefined;
   jwtSecret: string;
-  jwtRefreshSecret: string;
   jwtExpiresIn: string;
   bcryptSaltRounds: number;
   cookieSecure: boolean;
@@ -104,7 +103,6 @@ export function loadEnvConfig(): EnvConfig {
     corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
     mongodbUri: process.env.MONGODB_URI,
     jwtSecret: requireEnv("JWT_SECRET"),
-    jwtRefreshSecret: requireEnv("JWT_REFRESH_SECRET"),
     jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
     bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS ?? 10),
     cookieSecure:

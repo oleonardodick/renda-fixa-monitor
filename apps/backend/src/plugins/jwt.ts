@@ -20,13 +20,6 @@ async function jwtPlugin(fastify: FastifyInstance) {
       signed: false,
     },
   });
-
-  // Instância com segredo próprio para os refresh tokens, impedindo que um
-  // refresh token seja aceito como access token.
-  await fastify.register(fastifyJwt, {
-    namespace: "refresh",
-    secret: config.jwtRefreshSecret,
-  });
 }
 
 export default fp(jwtPlugin, {
@@ -35,7 +28,7 @@ export default fp(jwtPlugin, {
 
 declare module "@fastify/jwt" {
   interface FastifyJWT {
-    namespaces: "access" | "refresh";
+    namespaces: "access";
     user: {
       sub: string;
       email: string;

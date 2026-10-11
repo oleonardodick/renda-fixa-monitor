@@ -10,7 +10,6 @@ import {
 } from "../../tests/helpers.js";
 
 process.env.JWT_SECRET ??= "test-access-secret";
-process.env.JWT_REFRESH_SECRET ??= "test-refresh-secret";
 process.env.BCRYPT_SALT_ROUNDS ??= "4";
 // O cadastro possui rate limiting; os testes exercitam muitas requisições.
 process.env.RATE_LIMIT_MAX = "1000";
@@ -97,10 +96,8 @@ describe("POST /users", () => {
 
       const entries = getCookieEntries(response);
       const accessCookie = entries.find((header) => header.startsWith("accessToken="));
-      const refreshCookie = entries.find((header) => header.startsWith("refreshToken="));
 
       expect(accessCookie).toBeDefined();
-      expect(refreshCookie).toBeDefined();
       expect(accessCookie).toContain("HttpOnly");
       expect(accessCookie).toContain("SameSite=Lax");
       expect(accessCookie).toContain("Path=/");

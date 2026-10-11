@@ -14,7 +14,6 @@ export interface AuthTokenPayload {
 /** Assinatura dos tokens de sessão, injetada pela camada de HTTP. */
 export interface TokenSigner {
   signAccessToken(payload: AuthTokenPayload): string;
-  signRefreshToken(payload: AuthTokenPayload): string;
 }
 
 export interface AuthServiceDeps {
@@ -27,7 +26,6 @@ export interface SignInResult {
   /** Dados públicos do usuário autenticado, limitados à allowlist da API. */
   user: CurrentUser;
   accessToken: string;
-  refreshToken: string;
 }
 
 /**
@@ -49,7 +47,6 @@ export function createSession(deps: AuthServiceDeps, user: User): SignInResult {
   return {
     user: toCurrentUser(user),
     accessToken: deps.tokenSigner.signAccessToken(payload),
-    refreshToken: deps.tokenSigner.signRefreshToken(payload),
   };
 }
 

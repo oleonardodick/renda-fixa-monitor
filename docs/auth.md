@@ -4,12 +4,12 @@ Visão geral da autenticação baseada em JWT stateless com cookies `HttpOnly`.
 
 ## Endpoints
 
-| Método | Rota | Acesso | Descrição |
-| --- | --- | --- | --- |
-| `POST` | `/auth/login` | Público | Valida e-mail e senha, inicia a sessão e define os cookies de autenticação. Retorna `{ id, name, email }`. |
-| `POST` | `/auth/logout` | Público | Limpa os cookies de sessão e retorna `204 No Content`. |
-| `GET` | `/auth/me` | Protegido | Retorna `{ id, name, email }` do usuário da sessão atual, lidos do cookie `accessToken`. |
-| `POST` | `/users` | Público | Cadastra o usuário, inicia a sessão e retorna `{ userId }`. Sujeito a rate limiting. |
+| Método | Rota           | Acesso    | Descrição                                                                                                  |
+| ------ | -------------- | --------- | ---------------------------------------------------------------------------------------------------------- |
+| `POST` | `/auth/login`  | Público   | Valida e-mail e senha, inicia a sessão e define os cookies de autenticação. Retorna `{ id, name, email }`. |
+| `POST` | `/auth/logout` | Público   | Limpa os cookies de sessão e retorna `204 No Content`.                                                     |
+| `GET`  | `/auth/me`     | Protegido | Retorna `{ id, name, email }` do usuário da sessão atual, lidos do cookie `accessToken`.                   |
+| `POST` | `/users`       | Público   | Cadastra o usuário, inicia a sessão e retorna `{ userId }`. Sujeito a rate limiting.                       |
 
 A documentação interativa (Scalar) está disponível em `/docs`.
 
@@ -17,10 +17,9 @@ A documentação interativa (Scalar) está disponível em `/docs`.
 
 Os tokens são gerados pelo plugin `@fastify/jwt` já existente no sistema, com **payload contendo o ID do usuário** (`sub`) e o e-mail.
 
-| Cookie | Token | Validade | Segredo |
-| --- | --- | --- | --- |
-| `accessToken` | Access token | 1 hora | `JWT_SECRET` |
-| `refreshToken` | Refresh token | 1 dia | `JWT_REFRESH_SECRET` (secredo dedicado, impedindo que um refresh token seja usado como access token) |
+| Cookie        | Token        | Validade | Segredo      |
+| ------------- | ------------ | -------- | ------------ |
+| `accessToken` | Access token | 1 hora   | `JWT_SECRET` |
 
 Configuração dos cookies:
 
@@ -36,7 +35,11 @@ A sessão **não é persistida no banco de dados** (JWT stateless). O endpoint `
 `POST /auth/login` e `GET /auth/me` retornam os mesmos campos:
 
 ```json
-{ "id": "68d0f2a1b4c3d5e6f7a8b9c0", "name": "Maria Oliveira", "email": "maria.oliveira@example.com" }
+{
+  "id": "68d0f2a1b4c3d5e6f7a8b9c0",
+  "name": "Maria Oliveira",
+  "email": "maria.oliveira@example.com"
+}
 ```
 
 - **Allowlist explícita:** os dados são montados por `toCurrentUser`, que seleciona apenas `id`, `name` e `email`. `passwordHash` e qualquer campo interno nunca fazem parte da resposta, em vez de serem removidos depois. O schema `currentUserSchema` do pacote `shared` é estrito e rejeita campos adicionais, e o schema de resposta da API declara `additionalProperties: false` — uma falha em qualquer camada impede o vazamento.
@@ -70,13 +73,13 @@ Cria a conta e já inicia a sessão do novo usuário. A sessão é criada pela *
 
 **Entrada:** `{ name, email, password, confirmPassword }`.
 
-| Situação | Resposta |
-| --- | --- |
-| Sucesso | `201` com `{ userId }` e cookies de sessão (nenhum dado sensível na resposta) |
-| Dados inválidos | `400` com os erros por campo |
-| E-mail já cadastrado | `409` com o erro no campo `email` |
-| Limite de requisições excedido | `429` com mensagem genérica |
-| Falha inesperada | `500` com mensagem genérica, sem detalhes internos |
+| Situação                       | Resposta                                                                      |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| Sucesso                        | `201` com `{ userId }` e cookies de sessão (nenhum dado sensível na resposta) |
+| Dados inválidos                | `400` com os erros por campo                                                  |
+| E-mail já cadastrado           | `409` com o erro no campo `email`                                             |
+| Limite de requisições excedido | `429` com mensagem genérica                                                   |
+| Falha inesperada               | `500` com mensagem genérica, sem detalhes internos                            |
 
 Formato dos erros:
 
@@ -120,13 +123,13 @@ Isso inclui `POST /auth/login` e `GET /auth/me`, que **não declaram um limiter 
 
 `apps/frontend/src/features/auth/stores/authStore.ts` guarda a sessão e fica disponível para toda a aplicação:
 
-| Estado | Descrição |
-| --- | --- |
-| `status` | `"loading"` (inicial, aguardando resolução), `"authenticated"` ou `"unauthenticated"`. |
-| `user` | `{ id, name, email }` do usuário autenticado, ou `null`. |
-| `setSession(user)` | Autentica a sessão com os dados do usuário. |
-| `clearSession()` | Encerra a sessão e descarta os dados do usuário. |
-| `resetSession()` | Volta a `"loading"`, para que a sessão seja resolvida novamente. |
+| Estado             | Descrição                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `status`           | `"loading"` (inicial, aguardando resolução), `"authenticated"` ou `"unauthenticated"`. |
+| `user`             | `{ id, name, email }` do usuário autenticado, ou `null`.                               |
+| `setSession(user)` | Autentica a sessão com os dados do usuário.                                            |
+| `clearSession()`   | Encerra a sessão e descarta os dados do usuário.                                       |
+| `resetSession()`   | Volta a `"loading"`, para que a sessão seja resolvida novamente.                       |
 
 Regras de uso:
 
@@ -142,7 +145,6 @@ Regras de uso:
 
 ## Lacunas conhecidas
 
-- **Não existe fluxo de renovação de sessão.** O cookie `refreshToken` é emitido no login e no cadastro, mas nenhuma rota o utiliza para gerar um novo access token. Quando o access token expira (1 hora), a sessão é encerrada e o usuário precisa entrar novamente. Criar a renovação está fora do escopo desta feature e exigiria um novo contrato de endpoint.
 - **CSRF:** a proteção existente é `SameSite=Lax` combinado com o CORS que aceita credenciais apenas de `CORS_ORIGIN`. `GET /auth/me` é somente leitura e não altera estado. Não há token anti-CSRF para as rotas que alteram estado.
 
 ## Criando usuários para teste
@@ -160,7 +162,6 @@ O script `apps/backend/scripts/seed-user.ts` faz upsert do usuário com a senha 
 Variáveis relacionadas (ver `apps/backend/.env.example`):
 
 - `JWT_SECRET` — segredo do access token (obrigatório).
-- `JWT_REFRESH_SECRET` — segredo do refresh token (obrigatório).
 - `COOKIE_SECURE` — força o atributo `Secure` nos cookies (`false` por padrão em desenvolvimento).
 - `BCRYPT_SALT_ROUNDS` — custo do hash bcrypt das senhas.
 - `RATE_LIMIT_MAX` — máximo de requisições por janela de tempo (padrão `5`).

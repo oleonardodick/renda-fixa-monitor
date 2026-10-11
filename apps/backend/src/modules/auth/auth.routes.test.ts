@@ -5,7 +5,6 @@ import { buildServer } from "../../server.js";
 import { getCookieEntries, getCookieValue } from "../../tests/helpers.js";
 
 process.env.JWT_SECRET ??= "test-access-secret";
-process.env.JWT_REFRESH_SECRET ??= "test-refresh-secret";
 process.env.BCRYPT_SALT_ROUNDS ??= "4";
 
 const TEST_EMAIL = "maria.oliveira@example.com";
@@ -55,10 +54,8 @@ describe("POST /auth/login", () => {
 
     const entries = getCookieEntries(response);
     const accessCookie = entries.find((header) => header.startsWith("accessToken="));
-    const refreshCookie = entries.find((header) => header.startsWith("refreshToken="));
 
     expect(accessCookie).toBeDefined();
-    expect(refreshCookie).toBeDefined();
     expect(accessCookie).toContain("HttpOnly");
     expect(accessCookie).toContain("SameSite=Lax");
     expect(accessCookie).toContain("Path=/");
@@ -75,16 +72,6 @@ describe("POST /auth/login", () => {
     expect(accessPayload!.sub).toBe(fakeUser.id);
     expect(accessPayload!.email).toBe(TEST_EMAIL);
     expect(accessPayload!.exp - accessPayload!.iat).toBe(60 * 60);
-
-    const refreshPayload = await app.jwt.refresh.decode<{
-      sub: string;
-      iat: number;
-      exp: number;
-    }>(getCookieValue(response, "refreshToken"));
-
-    expect(refreshPayload).not.toBeNull();
-    expect(refreshPayload!.sub).toBe(fakeUser.id);
-    expect(refreshPayload!.exp - refreshPayload!.iat).toBe(24 * 60 * 60);
   });
 
   it("não deve retornar campos fora da allowlist nem dados sensíveis", async () => {
@@ -171,13 +158,10 @@ describe("POST /auth/logout", () => {
 
     const entries = getCookieEntries(response);
     const accessCookie = entries.find((header) => header.startsWith("accessToken="));
-    const refreshCookie = entries.find((header) => header.startsWith("refreshToken="));
 
     expect(accessCookie).toBeDefined();
-    expect(refreshCookie).toBeDefined();
     expect(accessCookie).toContain("accessToken=;");
     expect(accessCookie).toContain("HttpOnly");
-    expect(refreshCookie).toContain("refreshToken=;");
   });
 });
 
@@ -280,21 +264,6 @@ describe("GET /auth/me", () => {
     expect(response.json().message).toBe("Token de autenticação inválido ou ausente.");
   });
 
-  it("deve rejeitar um refresh token usado como access token", async () => {
-    const refreshToken = app.jwt.refresh.sign(
-      { sub: fakeUser.id, email: TEST_EMAIL },
-      { expiresIn: "1d" },
-    );
-
-    const response = await app.inject({
-      method: "GET",
-      url: "/auth/me",
-      cookies: { accessToken: refreshToken },
-    });
-
-    expect(response.statusCode).toBe(401);
-  });
-
   it("deve encerrar a sessão quando o usuário da sessão não existe mais", async () => {
     const accessToken = await signInCookie();
     // Simula a exclusão da conta depois que a sessão foi emitida.
@@ -323,7 +292,6 @@ describe("GET /auth/me", () => {
       const entries = getCookieEntries(response);
 
       expect(entries.find((header) => header.startsWith("accessToken=;"))).toBeDefined();
-      expect(entries.find((header) => header.startsWith("refreshToken=;"))).toBeDefined();
     } finally {
       await orphanApp.close();
     }

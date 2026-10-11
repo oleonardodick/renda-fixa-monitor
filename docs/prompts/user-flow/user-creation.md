@@ -13,7 +13,7 @@ To access all the functionalities of the system, users must have an account and 
 
 **In scope:** public sign-up screen, sign-up endpoint, shared validation schema, user persistence, automatic login after sign-up (reusing the existing Login feature), tests and documentation.
 
-**Out of scope (do not implement):** email verification, password recovery, social login, changes to the existing login/logout/refresh behavior, changes to the Dashboard.
+**Out of scope (do not implement):** email verification, password recovery, social login, changes to the existing login/logout behavior, changes to the Dashboard.
 
 ## Requirements
 
@@ -134,7 +134,7 @@ The implementation must include or update tests for the cases below.
 - Password: fewer than 8 characters, longer than 72 bytes, exactly 2 of 4 rule types (rejected), exactly 3 of 4 (accepted), all 4 (accepted).
 - Password and confirm password different.
 - Database failure returns a generic error.
-- Regression: existing login, logout and refresh behavior remains unchanged.
+- Regression: existing login and logout behavior remains unchanged.
 
 **Shared**
 
@@ -195,7 +195,7 @@ After implementation:
 - [ ] The response returns only the user ID, with no sensitive data.
 - [ ] The "Criar Conta" link on the login screen leads to the sign-up page, and authenticated users are redirected away from it.
 - [ ] Loading, error and success states work on desktop and mobile.
-- [ ] The existing login, logout and refresh behavior was not changed.
+- [ ] The existing login and logout behavior was not changed.
 - [ ] Rate limiting is applied and the security review was done, with any gap reported.
 - [ ] Relevant tests have been implemented and pass.
 - [ ] Documentation has been updated.

@@ -7,7 +7,7 @@ Prepare the backend to use Redis in a safe and reusable way, providing connectio
 
 ## Context
 
-The application will use Redis in the future for different purposes (for example, evolving the refresh token rule). This feature only prepares the infrastructure: connection, configuration, lifecycle, and abstractions. No existing functionality will start using Redis in this step.
+The application will use Redis in the future for different purposes. This feature only prepares the infrastructure: connection, configuration, lifecycle, and abstractions. No existing functionality will start using Redis in this step.
 
 ## Scope
 
@@ -16,7 +16,7 @@ The application will use Redis in the future for different purposes (for example
 **Out of scope (do not implement):**
 
 - Using Redis in any route, service, or business rule.
-- Changes to the refresh token rule, login, logout, sign-up, or any existing behavior.
+- Changes to any existing behavior.
 - Caching, rate limiting, sessions, or any other functional use of Redis.
 - Changes to `frontend` and `shared`.
 - Use of the official Fastify Redis plugin (`@fastify/redis`).
@@ -87,7 +87,7 @@ The implementation must include or update tests for the cases below. Use mocks o
 - The key prefix is applied correctly by the operations abstraction.
 - The basic operations (`get`, `set` with and without TTL, `del`, `exists`) call the client correctly.
 - Passwords and credentials do not appear in logs.
-- **Regression:** the existing test suite (login, logout, refresh token, sign-up, and others) passes without changes and without needing Redis.
+- **Regression:** the existing test suite (login, logout, sign-up, and others) passes without changes and without needing Redis.
 
 ## Documentation
 
@@ -135,8 +135,8 @@ After implementation:
 - [ ] The operations abstraction (interface plus Node Redis implementation) exists, applies the key prefix, and is covered by tests.
 - [ ] The application starts and works even if Redis is unavailable, with the behavior documented.
 - [ ] The connection is closed gracefully on shutdown, and client errors do not bring down the process.
-- [ ] Redis is not used in any route, service, or business rule (including the refresh token rule).
-- [ ] Existing behavior (login, logout, refresh token, sign-up, and others) was not changed, and the existing tests pass without Redis.
+- [ ] Redis is not used in any route, service, or business rule.
+- [ ] Existing behavior (login, logout, sign-up, and others) was not changed, and the existing tests pass without Redis.
 - [ ] Credentials and sensitive data do not appear in logs or responses.
 - [ ] Relevant tests have been implemented and pass.
 - [ ] Documentation has been updated.

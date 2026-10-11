@@ -10,12 +10,12 @@ O **Renda Fixa Monitor** tem como objetivo facilitar o acompanhamento dos invest
 
 Entre os principais objetivos estão:
 
-* Registrar investimentos e aportes;
-* Acompanhar a evolução dos investimentos;
-* Consolidar investimentos por instituição e conglomerado financeiro;
-* Acompanhar a utilização dos limites do FGC;
-* Projetar valores futuros considerando a rentabilidade dos investimentos;
-* Centralizar regras, tipos e contratos compartilhados entre frontend e backend.
+- Registrar investimentos e aportes;
+- Acompanhar a evolução dos investimentos;
+- Consolidar investimentos por instituição e conglomerado financeiro;
+- Acompanhar a utilização dos limites do FGC;
+- Projetar valores futuros considerando a rentabilidade dos investimentos;
+- Centralizar regras, tipos e contratos compartilhados entre frontend e backend.
 
 > O projeto possui caráter pessoal e de estudo.
 
@@ -23,37 +23,37 @@ Entre os principais objetivos estão:
 
 ### Frontend
 
-* React
-* TypeScript
-* Vite
-* React Router
-* Tailwind CSS
-* shadcn/ui
-* React Hook Form
-* Zod
-* Axios
-* Zustand
-* Lucide React
-* Vitest
+- React
+- TypeScript
+- Vite
+- React Router
+- Tailwind CSS
+- shadcn/ui
+- React Hook Form
+- Zod
+- Axios
+- Zustand
+- Lucide React
+- Vitest
 
 ### Backend
 
-* Node.js
-* TypeScript
-* Fastify
-* Mongoose
-* MongoDB
-* Redis
-* Zod
-* bcrypt
-* Scalar
-* Vitest
+- Node.js
+- TypeScript
+- Fastify
+- Mongoose
+- MongoDB
+- Redis
+- Zod
+- bcrypt
+- Scalar
+- Vitest
 
 ### Monorepo
 
-* pnpm Workspaces
-* TypeScript
-* Pacote compartilhado entre aplicações
+- pnpm Workspaces
+- TypeScript
+- Pacote compartilhado entre aplicações
 
 ## Estrutura do projeto
 
@@ -81,13 +81,13 @@ Aplicação web responsável pela interface do sistema.
 
 Contém:
 
-* páginas;
-* componentes;
-* formulários;
-* gerenciamento de estado;
-* integração com a API;
-* componentes do shadcn/ui;
-* testes de interface.
+- páginas;
+- componentes;
+- formulários;
+- gerenciamento de estado;
+- integração com a API;
+- componentes do shadcn/ui;
+- testes de interface.
 
 Os componentes do shadcn/ui ficam inicialmente em:
 
@@ -101,12 +101,12 @@ Um pacote compartilhado de UI só deverá ser criado caso exista uma necessidade
 
 API responsável por:
 
-* regras de negócio;
-* autenticação;
-* acesso ao banco de dados;
-* APIs REST;
-* validação dos dados;
-* integração com serviços externos.
+- regras de negócio;
+- autenticação;
+- acesso ao banco de dados;
+- APIs REST;
+- validação dos dados;
+- integração com serviços externos.
 
 ### `packages/shared`
 
@@ -114,11 +114,11 @@ Código compartilhado entre as aplicações.
 
 Deve conter principalmente:
 
-* schemas Zod;
-* tipos TypeScript;
-* constantes;
-* contratos de API;
-* estruturas que precisam ser conhecidas pelo frontend e backend.
+- schemas Zod;
+- tipos TypeScript;
+- constantes;
+- contratos de API;
+- estruturas que precisam ser conhecidas pelo frontend e backend.
 
 Regras específicas de frontend ou backend não devem ser colocadas neste pacote.
 
@@ -126,9 +126,9 @@ Regras específicas de frontend ou backend não devem ser colocadas neste pacote
 
 Antes de executar o projeto, certifique-se de possuir:
 
-* Node.js;
-* pnpm;
-* MongoDB, quando necessário para executar o backend.
+- Node.js;
+- pnpm;
+- MongoDB, quando necessário para executar o backend.
 
 Verifique as versões instaladas:
 
@@ -223,10 +223,10 @@ pnpm --filter @renda-fixa-monitor/shared typecheck
 
 O sistema utiliza autenticação stateless com JWT e cookies `HttpOnly`:
 
-* `POST /auth/login` — autentica o usuário, retorna `{ id, name, email }` e define os cookies de sessão (`accessToken` com validade de 1 hora e `refreshToken` com validade de 1 dia);
-* `POST /auth/logout` — limpa os cookies de sessão;
-* `GET /auth/me` — retorna `{ id, name, email }` do usuário da sessão atual, lidos do cookie de sessão;
-* `POST /users` — cadastro público de usuário: cria a conta e já inicia a sessão.
+- `POST /auth/login` — autentica o usuário, retorna `{ id, name, email }` e define os cookies de sessão (`accessToken` com validade de 1 hora);
+- `POST /auth/logout` — limpa os cookies de sessão;
+- `GET /auth/me` — retorna `{ id, name, email }` do usuário da sessão atual, lidos do cookie de sessão;
+- `POST /users` — cadastro público de usuário: cria a conta e já inicia a sessão.
 
 Detalhes, regras de negócio e instruções para criar usuários de teste em [docs/auth.md](docs/auth.md).
 
@@ -293,9 +293,9 @@ O projeto busca manter uma implementação simples e previsível.
 
 Cada aplicação deve possuir responsabilidades bem definidas.
 
-* Frontend: apresentação e interação com o usuário;
-* Backend: regras de negócio e persistência;
-* Shared: contratos e estruturas compartilhadas.
+- Frontend: apresentação e interação com o usuário;
+- Backend: regras de negócio e persistência;
+- Shared: contratos e estruturas compartilhadas.
 
 ### Validação
 
@@ -323,14 +323,14 @@ As regras de desenvolvimento devem ser mantidas no próprio repositório para qu
 
 As regras devem definir principalmente:
 
-* arquitetura;
-* responsabilidades de cada workspace;
-* padrões de código;
-* convenções de commits;
-* estratégia de testes;
-* uso do `shared`;
-* regras para frontend e backend;
-* critérios para criação de novas abstrações.
+- arquitetura;
+- responsabilidades de cada workspace;
+- padrões de código;
+- convenções de commits;
+- estratégia de testes;
+- uso do `shared`;
+- regras para frontend e backend;
+- critérios para criação de novas abstrações.
 
 O agente deve consultar essas regras antes de implementar novas funcionalidades.
 

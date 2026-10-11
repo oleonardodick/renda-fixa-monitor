@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { IUserRepository } from "../users/user.repository.js";
-import { ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL } from "./auth.constants.js";
+import { ACCESS_TOKEN_TTL } from "./auth.constants.js";
 import type { AuthServiceDeps } from "./auth.service.js";
 
 /**
@@ -17,8 +17,6 @@ export function createAuthServiceDeps(
     comparePassword: (plain, hash) => app.bcrypt.compare(plain, hash),
     tokenSigner: {
       signAccessToken: (payload) => app.jwt.access.sign(payload, { expiresIn: ACCESS_TOKEN_TTL }),
-      signRefreshToken: (payload) =>
-        app.jwt.refresh.sign(payload, { expiresIn: REFRESH_TOKEN_TTL }),
     },
   };
 }

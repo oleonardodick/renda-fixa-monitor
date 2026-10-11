@@ -70,7 +70,6 @@ function useFailingClient(): void {
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development");
   vi.stubEnv("JWT_SECRET", "segredo-de-teste");
-  vi.stubEnv("JWT_REFRESH_SECRET", "segredo-de-refresh-de-teste");
   vi.stubEnv("REDIS_PASSWORD", SECRET_PASSWORD);
   vi.stubEnv("REDIS_HOST", "redis.exemplo");
   vi.stubEnv("REDIS_PORT", "6380");

@@ -13,7 +13,7 @@ Today the Login feature returns only the user ID and sets the session cookies. T
 
 **In scope:** login response update (ID, name, email), secure endpoint to retrieve the current authenticated user (evaluate the existing `/me` route in the auth routes), shared schema/type for the user data, Zustand store, store hydration and cleanup, rate limiting coverage, tests and documentation.
 
-**Out of scope (do not implement):** profile editing, password change or recovery, email verification, changes to the token/session strategy (cookies, expiration, refresh behavior), changes to the sign-up validation rules, changes to the Dashboard layout (only consume the store if a minimal change is required to prove the integration).
+**Out of scope (do not implement):** profile editing, password change or recovery, email verification, changes to the token/session strategy (cookies, expiration), changes to the sign-up validation rules, changes to the Dashboard layout (only consume the store if a minimal change is required to prove the integration).
 
 ## Requirements
 
@@ -37,7 +37,7 @@ Today the Login feature returns only the user ID and sets the session cookies. T
 ### Current user retrieval
 
 - The user identity must come exclusively from the validated session cookie. The endpoint must not accept a user ID or any identifier from the client (query, params or body) to prevent access to other users' data.
-- If the session is missing, invalid or expired: return HTTP 401 following the existing API error format, with a generic pt-BR message. Reuse the existing authentication middleware and refresh behavior; do not reimplement token validation.
+- If the session is missing, invalid or expired: return HTTP 401 following the existing API error format, with a generic pt-BR message. Reuse the existing authentication middleware; do not reimplement token validation.
 - If the session is valid but the user no longer exists: treat as unauthenticated (401) and ensure the session is not kept active, following the existing standards.
 - The response must include `Cache-Control: no-store` (or the project's equivalent) so the user data is not cached by browsers or intermediaries.
 
@@ -60,7 +60,7 @@ Today the Login feature returns only the user ID and sets the session cookies. T
 2. The backend creates the session (cookies) and returns `id`, `name` and `email`.
 3. The frontend saves the data in the Zustand store and redirects as it does today.
 4. When the user reloads the page or opens the application with a valid session, the frontend requests the current user endpoint, using the cookie automatically, and fills the store before rendering protected content that depends on it.
-5. If the request returns 401 and the session cannot be refreshed (following the existing refresh behavior), the store is cleared and the user is redirected to login, following the existing behavior.
+5. If the request returns 401 and the session cannot be refreshed, the store is cleared and the user is redirected to login, following the existing behavior.
 6. When the user logs out, the store is cleared.
 7. If an unexpected error happens (network or server failure) while fetching the user, a generic pt-BR message is displayed (toast or alert) and the application does not break; the store remains empty.
 
@@ -124,7 +124,7 @@ The implementation must include or update tests for the cases below.
 - Response contains `Cache-Control: no-store`.
 - Rate limit is applied to the login and current user endpoints (covered by the global limiter, or explicit if needed).
 - Database failure returns a generic error.
-- Regression: existing logout and refresh behavior remains unchanged, and existing login tests still pass after the response change.
+- Regression: existing logout remains unchanged, and existing login tests still pass after the response change.
 
 **Shared**
 
@@ -187,7 +187,7 @@ After implementation:
 - [ ] The store is filled after login and sign-up, restored on page reload with a valid session, and cleared on logout and unrecoverable 401.
 - [ ] The user type/schema is defined in `shared` and reused by backend and frontend.
 - [ ] Rate limiting covers the involved endpoints (global coverage verified, explicit declaration only where missing).
-- [ ] The existing login, logout, refresh and sign-up contracts were not changed beyond the login response fields.
+- [ ] The existing login and logout and sign-up contracts were not changed beyond the login response fields.
 - [ ] Loading, error and success states work on desktop and mobile.
 - [ ] The security review was done, with any gap reported.
 - [ ] Relevant tests have been implemented and pass.
